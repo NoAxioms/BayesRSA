@@ -3,25 +3,30 @@ import numpy as np
 from utilities import softmax, bayes_rule, uniform, arr2tex
 
 class RSA():
-	def __init__(self, listener_probs_lit=None, listener_prior = None, theta=1.0, item_tuple = None):
+	def __init__(self, listener_probs_lit=None, listener_prior = None, theta=1.0, item_tuple = None, vocab=None, default_depth=1):
 		if item_tuple is not None:
 			listener_probs_lit, vocab = binary_listener_probs(item_tuple)
-			self.vocab = vocab
-			self.item_tuple = item_tuple
+			vocab = vocab
+			item_tuple = item_tuple
+		self.vocab = vocab
+		self.item_tuple = item_tuple
 		self.listener_probs_lit = listener_probs_lit
 		self.listener_probs = self.listener_probs_lit
 		self.theta = theta
 		self.speaker_probs = softmax(self.listener_probs,axis=0,theta=self.theta).swapaxes(0,1) #[s][u]
 		self.num_states = listener_probs_lit.shape[1]
 		self.num_utterances = listener_probs_lit.shape[0]
+		self.default_depth = default_depth
 		self.cur_depth = 0
 		self.running_time = 0
 		if listener_prior is None:
 			self.listener_prior = np.array([1.0 / self.num_states for i in range(self.num_states)])
 		else:
 			self.listener_prior = listener_prior
-	def run(self,depth):
+	def run(self,depth=None):
 		start_time = time.time()
+		if depth is None:
+			depth=self.default_depth
 		for d in range(depth):
 			#Update listener based on speaker: P_l(s | w, a) prop P_s(w | s, a)P(s)
 			self.listener_probs = bayes_rule(self.listener_prior,self.speaker_probs) #[u][s]
@@ -29,6 +34,7 @@ class RSA():
 			self.speaker_probs = softmax(self.listener_probs,axis=0,theta=self.theta).swapaxes(0,1) #[s][u]
 			self.cur_depth += 1
 		self.running_time += time.time() - start_time
+		return self.speaker_probs
 	def reset(self):
 		self.listener_probs = self.listener_probs_lit
 		self.speaker_probs = softmax(self.listener_probs,axis=0,theta=self.theta).swapaxes(0,1) #[s][u]

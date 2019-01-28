@@ -62,3 +62,9 @@ def uniform(n):
 	return np.array([1.0 / n for i in range(n)])
 def arr2tex(a):
 	return " \\\\\n".join([" & ".join(map(str,line)) for line in a])
+def powerset(a):
+	subsets = []
+	for i in range(2**len(a)):
+		current_subset = [a[j] for j in range(len(a)) if (i % (2**(j+1))) - (i %(2**j)) == 0]
+		subsets.append(current_subset)
+	return subsets
