@@ -1,8 +1,8 @@
 from utilities import powerset
-def generate_items(num_words = 3):
-	vocab = ["moustache","glasses","ears","nose","eyes","eyebrows","hair","beard","teeth"][0:num_words]
+def generate_items(num_words = 2):
+	vocab = sorted(["moustache","glasses","hat","ears","nose","eyes","eyebrows","hair","beard","teeth"][0:num_words])
 	#Get a face with any subset of the next three features
-	items = [tuple(["face"] + x) for x in powerset(vocab)]
+	items = sorted([tuple(["face"] + x) for x in powerset(vocab)])
 	# items = [tuple(x) for x in powerset(vocab)]
 	items = tuple(items)
 	return items

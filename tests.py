@@ -43,15 +43,15 @@ def test_permutation_invariance():
 			de_permuted_probs[s,:] = permuted_probs[s_id,:]
 
 		assert np.array_equal(de_permuted_probs,speaker_probs_standard), "{} {}\n{}\n\n{}".format(perm_id,perm,speaker_probs_standard,de_permuted_probs)
-def rsa_test(item_tuple, depth=1, priors = None, theta=5.0):
+def rsa_test(items, depth=1, priors = None, theta=5.0):
 	print("theta: {}".format(theta))
 	if priors is None:
-		priors = (uniform(len(item_tuple)),)
+		priors = (uniform(len(items)),)
 	rsa_list = []
 	for p in priors:
-		rsa = RSA(item_tuple=item_tuple,theta=theta,listener_prior = p)
+		rsa = RSA(items=items,theta=theta,listener_prior = p)
 		# print("Vocab: {}".format(rsa.vocab))
-		# print("Items: {}".format(item_tuple))
+		# print("Items: {}".format(items))
 		# print("Prior: {}".format(p))
 		# print("\nListener_0 [u][s]:\n{}".format(rsa.listener_probs))
 		# print("\nSpeaker_0 [s][u]:\n{}".format(rsa.speaker_probs))

@@ -4,17 +4,18 @@ from rsaClass import RSA
 from utilities import bayes_rule, uniform
 from item_generator import generate_items
 import matplotlib.pyplot as plt
+from display import displayDistribution
 #TODO create visualizer for items, dress up game like. Maybe toggle layers in inkscape/blender.
 class BayesFilter():
-	def __init__(self, item_tuple, transitionMatrix=None, **rsa_kwargs):
+	def __init__(self, items, transitionMatrix=None, **rsa_kwargs):
 		"""
 		"""
-		self.vocab = tuple(sorted(set((x for i in item_tuple for x in i))))
-		self.item_tuple = item_tuple
+		self.vocab = tuple(sorted(set((x for i in items for x in i))))
+		self.items = items
 		self.rsa_kwargs = rsa_kwargs
-		self.num_states = len(item_tuple)
+		self.num_states = len(items)
 		if transitionMatrix is None:
-			self.transitionMatrix = np.identity(len(item_tuple))
+			self.transitionMatrix = np.identity(len(items))
 		else:
 			self.transitionMatrix = transitionMatrix #[s][s']
 	def simulate(self,s_id,depth=1,b=None, verbose=True):
@@ -30,6 +31,7 @@ class BayesFilter():
 			b = self.update(b,o_id)
 			if verbose:
 				print("b_{}: {}".format(d,b))
+			displayDistribution(b,self.items)
 		return b
 	def update(self,b,o_id):
 		if type(o_id) is not int:
@@ -41,7 +43,7 @@ class BayesFilter():
 		b = bayes_rule(b,observationMatrix)[o_id]  #P(b), P(a | b) [b][a] -> P(b | a) [a][b]
 		return b
 	def getObservationMatrix(self,belief):
-		rsa = RSA(item_tuple = self.item_tuple, **self.rsa_kwargs)
+		rsa = RSA(items = self.items, **self.rsa_kwargs)
 		return rsa.run()
 if __name__ == "__main__":
 	np.set_printoptions(precision=3,suppress=True)
@@ -53,6 +55,6 @@ if __name__ == "__main__":
 		"theta":10.0,
 		"default_depth":10
 	}
-	bf = BayesFilter(item_tuple = items,**rsa_kwargs)
+	bf = BayesFilter(items = items,**rsa_kwargs)
 	b = bf.simulate(0,depth=10)
 	print(b)

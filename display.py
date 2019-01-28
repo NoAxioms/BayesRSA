@@ -15,8 +15,8 @@ def displayDistribution(distribution, items):
 	fig, ax = plt.subplots()
 	ax.set_xlim(left=0,right=1)
 	a=ax.get_xaxis()
-	print(a)
-	print("figure width: {}".format(fig.patch.get_width()))
+	# print(a)
+	# print("figure width: {}".format(fig.patch.get_width()))
 	bar = ax.bar(locs,distribution,bar_width, align='edge')
 	image_axis_height = 0.0
 	image_x_offset = -0.022
@@ -30,7 +30,7 @@ def displayDistribution(distribution, items):
 		# left = locs[i_id]
 		left = fig.transFigure.inverted().transform((ax.transAxes.transform((locs[i_id],image_axis_height))))[0] + image_x_offset
 		# left = (bar_i.get_x() + bar_i.get_width()/2)/fig.patch.get_width()
-		print("{}:  {}".format(i_id, left))
+		# print("{}:  {}".format(i_id, left))
 		rect = (left,image_axis_height, .1, .1)
 		a_i = fig.add_axes(rect)
 		a_i.axison=False

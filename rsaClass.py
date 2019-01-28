@@ -3,13 +3,13 @@ import numpy as np
 from utilities import softmax, bayes_rule, uniform, arr2tex
 
 class RSA():
-	def __init__(self, listener_probs_lit=None, listener_prior = None, theta=1.0, item_tuple = None, vocab=None, default_depth=1):
-		if item_tuple is not None:
-			listener_probs_lit, vocab = binary_listener_probs(item_tuple)
+	def __init__(self, listener_probs_lit=None, listener_prior = None, theta=1.0, items = None, vocab=None, default_depth=1):
+		if items is not None:
+			listener_probs_lit, vocab = binary_listener_probs(items)
 			vocab = vocab
-			item_tuple = item_tuple
+			items = items
 		self.vocab = vocab
-		self.item_tuple = item_tuple
+		self.items = items
 		self.listener_probs_lit = listener_probs_lit
 		self.listener_probs = self.listener_probs_lit
 		self.theta = theta
@@ -42,7 +42,7 @@ class RSA():
 		self.running_time = 0
 	def __str__(self):
 		s = "Vocab: {}".format(self.vocab)
-		s += "\nItems: {}".format(self.item_tuple)
+		s += "\nItems: {}".format(self.items)
 		s += "\nPrior: {}".format(self.listener_prior)
 		s += "\nSpeaker_{} [s][u]:\n{}".format(self.cur_depth,self.speaker_probs)
 		s += "\nListener_{} [u][s]:\n{}".format(self.cur_depth,self.listener_probs)
