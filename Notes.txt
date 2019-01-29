@@ -1,0 +1,1 @@
+The example in main.py fails with and without updating RSA prior. Try with different seeds, check expected performance. Change RSA parameters. Automate these tests and save data to csv/json.
