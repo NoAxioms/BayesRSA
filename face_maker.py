@@ -8,10 +8,11 @@ from utilities import powerset
 # from reportlab.graphics import renderPDF, renderPM
 
 components_all = ["face","moustache","glasses","hat","ears","nose","eyes","eyebrows","hair","beard","teeth"]
-image_directory = os.path.dirname(os.path.realpath(__file__)) + "/images/"
+face_vector_directory = os.path.dirname(os.path.realpath(__file__)) + "/face_vectors"
+face_image_directory = os.path.dirname(os.path.realpath(__file__)) + "/face_images/"
 def makeFace(components):
 	components = sorted(components)
-	tree = etree.parse(open(image_directory + "face_all.svg",'r'))
+	tree = etree.parse(open(face_vector_directory + "face_all.svg",'r'))
 	missing_names = [c for c in components_all if c not in components]
 	missing_elements = []
 	for element in tree.iter():
@@ -20,13 +21,13 @@ def makeFace(components):
 	for element in missing_elements:
 		element.getparent().remove(element)
 	new_name = "_".join(components)
-	tree.write(image_directory + new_name + ".svg")
-	drawing = svg2rlg(image_directory + new_name + ".svg")
+	tree.write(face_vector_directory + new_name + ".svg")
+	drawing = svg2rlg(face_vector_directory + new_name + ".svg")
 	# renderPDF.drawToFile(drawing, "file.pdf")
-	renderPM.drawToFile(drawing, image_directory + new_name + ".png", fmt="PNG")
+	renderPM.drawToFile(drawing, face_image_directory + new_name + ".png", fmt="PNG")
 def item_to_image_path(item):
 	new_name = "_".join(item) + ".png"
-	return image_directory + new_name
+	return face_image_directory + new_name
 if __name__ == "__main__":
 	faces = powerset(["face","moustache","glasses","hat"])[0:-1]
 	# faces_classic = (("face",),("face","moustache"),("face","moustache","glasses"))
