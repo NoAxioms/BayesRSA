@@ -1,3 +1,4 @@
 {
-	"faces_classic":["face","face moustache","face moustache glasses"]
+	"faces_classic":["face","face moustache","face moustache glasses"],
+	"faces_sym": ["face glasses", "face glasses moustache", "face moustache"]
 }

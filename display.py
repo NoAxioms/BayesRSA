@@ -7,6 +7,7 @@ from face_maker import item_to_image_path
 image_directory = os.path.dirname(os.path.realpath(__file__)) + "/images/"
 # img=mpimg.imread(image_directory + "face.png")
 # active_distribution=0
+#TODO RuntimeWarning: More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory.
 def createBeliefFigure(belief, items, observation = "N/A", save_location = None, display_now = False, des_id = None):
 	# plt.tick_params(
 	#     axis='x',          # changes apply to the x-axis
@@ -47,7 +48,9 @@ def createBeliefFigure(belief, items, observation = "N/A", save_location = None,
 		plt.show()
 	if save_location is not None:
 		plt.savefig(save_location)
-	return fig
+	plt.close()
+	# plt.clf()
+	# return fig
 
 
 # def displayDistributionList(distribution_list,items, observations = None):

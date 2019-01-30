@@ -11,7 +11,7 @@ class BayesFilter():
 	def __init__(self, items, transitionMatrix=None, rsa_config=None, name=None):
 		"""
 		"""
-		self.name = name if name is not None else str(datetime.datetime.now()).replace(":","_").replace(" ","_")[5:12]
+		self.name = name if name is not None else str(datetime.datetime.now()).replace(":","_").replace(" ","_")[5:13]
 		self.rsa_config = rsa_config if rsa_config is not None else {}
 		self.record_path = os.path.dirname(os.path.realpath(__file__)) + "/trajectory_logs/" + self.name + "/"
 		self.vocab = tuple(sorted(set((x for i in items for x in i))))
@@ -55,7 +55,6 @@ class BayesFilter():
 		#Predict
 		b = np.einsum('s,st->t',b,self.transitionMatrix)
 		#Update based on observation. Currently computes for all possible observations, need to write a more general bayes rule
-		#TODO next line is probably wrong.
 		b = bayes_rule(b,observationMatrix)[o_id]  #P(b), P(a | b) [b][a] -> P(b | a) [a][b]
 		return b
 	def getObservationMatrix(self,belief):
