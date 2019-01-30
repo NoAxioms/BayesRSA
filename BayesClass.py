@@ -5,8 +5,8 @@ from utilities import bayes_rule, uniform
 from item_generator import generate_items
 import matplotlib.pyplot as plt
 from display import createBeliefFigure
-#TODO create visualizer for items, dress up game like. Maybe toggle layers in inkscape/blender.
-np.random.seed(seed=0)
+# np.random.seed(seed=0)
+#TODO 
 class BayesFilter():
 	def __init__(self, items, transitionMatrix=None, rsa_config=None, name=None):
 		"""
@@ -16,7 +16,6 @@ class BayesFilter():
 		self.record_path = os.path.dirname(os.path.realpath(__file__)) + "/trajectory_logs/" + self.name + "/"
 		self.vocab = tuple(sorted(set((x for i in items for x in i))))
 		self.items = items
-		self.rsa_config = rsa_config
 		self.num_states = len(items)
 		self.transitionMatrix = transitionMatrix if transitionMatrix is not None else np.identity(len(items)) #[s][s']
 
@@ -40,7 +39,7 @@ class BayesFilter():
 			if verbose:
 				print("o_{}: {}".format(d,self.vocab[o_id]))
 			#Update based on transition and observation
-			b = self.update(b,o_id)
+			b = self.update(b,o_id, observationMatrix)
 			o_list.append(self.vocab[o_id])
 			belief_list.append(b)
 			if record:
@@ -49,13 +48,14 @@ class BayesFilter():
 				print("b_{}: {}".format(d,b))
 			# displayDistribution(b,self.items)
 		return belief_list, o_list
-	def update(self,b,o_id):
+	def update(self,b,o_id, obs_mat = None):
 		if type(o_id) is not int:
 			raise TypeError('Need index of observation')
-		observationMatrix = self.getObservationMatrix(b)
+		observationMatrix = self.getObservationMatrix(b) if obs_mat is None else obs_mat
 		#Predict
 		b = np.einsum('s,st->t',b,self.transitionMatrix)
 		#Update based on observation. Currently computes for all possible observations, need to write a more general bayes rule
+		#TODO next line is probably wrong.
 		b = bayes_rule(b,observationMatrix)[o_id]  #P(b), P(a | b) [b][a] -> P(b | a) [a][b]
 		return b
 	def getObservationMatrix(self,belief):
