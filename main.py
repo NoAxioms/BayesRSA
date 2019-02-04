@@ -35,7 +35,7 @@ def experiment(num_trials = 10, trial_length = 10, rsa_config = None):
 			trajectories_for_item = []
 			trajectories_dict[update_rule].append(trajectories_for_item)
 			for t in range(num_trials):
-				b_list, o_list = bf.simulate(des_id,trial_length, update_rsa_prior = update_rule, record = False, verbose = False)
+				b_list, o_list = bf.simulate(des_id,trial_length, update_rsa_prior = update_rule, save_images = False, save_trajectories = True)
 				trajectories_for_item.append(list(zip(b_list,o_list)))
 				if b_list[-1][des_id] > 0.9:
 					successes_per_item[des_id] += 1

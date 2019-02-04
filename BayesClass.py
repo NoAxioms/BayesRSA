@@ -1,4 +1,4 @@
-import time, os, datetime
+import time, os, datetime, json
 import numpy as np
 from rsaClass import RSA
 from utilities import bayes_rule, uniform
@@ -18,8 +18,9 @@ class BayesFilter():
 		self.items = items
 		self.num_states = len(items)
 		self.transitionMatrix = transitionMatrix if transitionMatrix is not None else np.identity(len(items)) #[s][s']
+		self.num_simulations = 0
 
-	def simulate(self,s_id,depth=1,b=None, verbose=True, record=True, update_rsa_prior = True):
+	def simulate(self,s_id,depth=1,b=None, save_trajectories = True, save_images = False, update_rsa_prior = True):
 		"""
 		TODO: Allow beliefs to be viewed while simulation is still running. 
 		"""
@@ -28,25 +29,32 @@ class BayesFilter():
 		b0 = b
 		belief_list = [b]
 		o_list = ["START"]
-		if record:
-			#Create new folder for recording
-			os.mkdir(self.record_path)
-			createBeliefFigure(b,self.items,"START",save_location=self.record_path + "/0.png", des_id=s_id)
+		if (save_images or save_trajectories):
+			self.num_simulations += 1
+			if not os.path.isdir(self.record_path):	os.mkdir(self.record_path)
+		if save_images:
+			createBeliefFigure(b,self.items,"START",save_location=self.record_path + "/{}_0.png".format(self.num_simulations - 1), des_id=s_id)
 		for d in range(depth):
 			observationMatrix = self.getObservationMatrix(b) if update_rsa_prior else self.getObservationMatrix(b0)
 			#Sample observation
 			o_id = np.random.choice(observationMatrix.shape[1],p=observationMatrix[s_id])
-			if verbose:
-				print("o_{}: {}".format(d,self.vocab[o_id]))
 			#Update based on transition and observation
 			b = self.update(b,o_id, observationMatrix)
 			o_list.append(self.vocab[o_id])
 			belief_list.append(b)
-			if record:
-				createBeliefFigure(b,self.items,self.vocab[o_id],save_location=self.record_path + "/{}.png".format(d + 1),des_id=s_id)
-			if verbose:
-				print("b_{}: {}".format(d,b))
+			if save_images:
+				createBeliefFigure(b,self.items,self.vocab[o_id],save_location=self.record_path + "/{}_{}.png".format(self.num_simulations - 1, d + 1),des_id=s_id)
 			# displayDistribution(b,self.items)
+		if save_trajectories:
+			json_name = "simulation{}.json".format(self.num_simulations - 1)
+
+			data = {
+				"items":[" ".join(x) for x in self.items],
+				"rsa_config": self.rsa_config,
+				"steps":[{"observation":o_list[i], "belief":list(belief_list[i])} for i in range(len(belief_list))]
+				}
+			with open(self.record_path + json_name,'w') as f:
+				json.dump(data,f, indent=4)
 		return belief_list, o_list
 	def update(self,b,o_id, obs_mat = None):
 		if type(o_id) is not int:
@@ -60,6 +68,10 @@ class BayesFilter():
 	def getObservationMatrix(self,belief):
 		rsa = RSA(items = self.items, **self.rsa_config)
 		return rsa.run()
+	def item_to_string(self, item):
+		"""TODO make face class and put this function, along with the face image functions, there"""
+		return " ".join(item)
+
 if __name__ == "__main__":
 	np.set_printoptions(precision=3,suppress=True)
 	# faces_classic = (("face",),("face","moustache"),("face","moustache","glasses"))
