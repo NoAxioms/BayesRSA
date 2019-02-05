@@ -2,6 +2,7 @@ import json, os, sys
 from BayesClass import BayesFilter
 from item_generator import generate_items
 from display import createBeliefFigure
+from rsaClass import RSAExplorer
 try:
 	input
 except:
@@ -60,4 +61,8 @@ def experiment(num_trials = 10, trial_length = 10, rsa_config = None):
 	# td.generateAllFigures()
 	# td.display()
 if __name__ == "__main__":
-	experiment(num_trials = 10, trial_length = 50)
+	with open("./standard_faces.json", 'r') as f:
+		standard_faces = json.load(f)
+		faces_classic = tuple(x.split(" ") for x in standard_faces["faces_classic"])
+		faces_sym = tuple(x.split(" ") for x in standard_faces["faces_sym"])
+	rsaExplorer = RSAExplorer(items=faces_classic, theta=5.0)

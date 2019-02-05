@@ -1,6 +1,7 @@
 import time
 import numpy as np
-from utilities import softmax, bayes_rule, uniform, arr2tex
+from utilities import softmax, bayes_rule, uniform, arr2tex, get_belief_grid
+from display import plotBeliefSimplex
 
 class RSA():
 	def __init__(self, listener_probs_lit=None, listener_prior = None, theta=1.0, items = None, vocab=None, default_depth=1):
@@ -47,6 +48,34 @@ class RSA():
 		s += "\nSpeaker_{} [s][u]:\n{}".format(self.cur_depth,self.speaker_probs)
 		s += "\nListener_{} [u][s]:\n{}".format(self.cur_depth,self.listener_probs)
 		return s
+class RSAExplorer():
+	"""
+	Run RSA with different parameters and plot results. Currently only works with dimension 3
+	"""
+	def __init__(self, items, theta = 1.0, rsa_depth = 5):
+		self.listener_probs_lit, self.vocab = binary_listener_probs(items)
+		self.items = items
+		self.theta = theta
+		belief_resolution = len(items) * 10
+		# self.belief_points = freudenthal(len(items), upper_bound=freudenthal_bound)
+		self.belief_points = get_belief_grid(len(items), resolution=belief_resolution)
+		print(self.belief_points)
+		print("number beliefs: {}".format(len(self.belief_points)))
+		self.rsa_args = {"listener_probs_lit": self.listener_probs_lit, "theta":self.theta, "default_depth":rsa_depth}
+		self.gatherSpeakerProbs()
+		self.display()
+	def gatherSpeakerProbs(self):
+		self.speaker_probs = np.empty(shape=(len(self.belief_points), len(self.items),len(self.vocab))) #b_i, s, u
+		for b_id in range(len(self.belief_points)):
+			rsa = RSA(listener_prior=self.belief_points[b_id], **self.rsa_args)
+			self.speaker_probs[b_id,:,:] = rsa.run()
+		return self.speaker_probs
+	def display(self, u_id = 0, condition_states = (0,1)):
+		speaker_ratios = np.true_divide(self.speaker_probs[:,condition_states[0],u_id],self.speaker_probs[:,condition_states[1],u_id])
+		title = "P({} | {}) / P({} | {})".format(self.vocab[u_id],self.items[condition_states[0]], self.vocab[u_id],self.items[condition_states[1]])
+		axis_labels = (str(self.items[0]), str(self.items[1]))
+		plotBeliefSimplex(self.belief_points,speaker_ratios, title=title, axis_labels=axis_labels)
+
 def proportional_vector_prob(utterance_vectors, alpha = 0.0):
 	"""
 	:param alpha: A noise parameter between 0 and 1. alpha=0 is noiseless, alpha=1 gives uniform distributions.

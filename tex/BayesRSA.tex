@@ -12,19 +12,22 @@
 \newcommand\fishnote[1]{\textcolor{blue}{#1}}
 \newcommand\ernote[1]{\textcolor{red}{#1}}
 % formulas
+\newcommand\al[1]{\left({#1}\right)^{\alpha}}
 % Listener prob args: s, u, d, i. 
 % Note that d refers to the depth of the listener, the depth of the listener is d-1.
 \newcommand\listener[4]{\ddfrac{O^{{#3}-1}({#2} \mid {#1})b({#1})}{\sum_{s'}O^{{#3}-1}({#2} \mid s')b(s')}}
+
 % Listener prob notation
 \newcommand\lstn[4]{b_{#4}^{#3}({#1}\mid {#2})}
 \newcommand\lstna[4]{\left(\lstn{#1}{#2}{#3}{#4}\right)^{\alpha}}
 % Speaker prob args: s, u, d, i
-\newcommand\speaker[4]{\ddfrac{e^{\alpha \ln(b_{#4}^{#3}({#1} \mid {#2}))}}{\sum_{u'}e^{\alpha \ln(b_{#4}^{#3}({#1} \mid u'))}}}
-\newcommand\spkr[4]{\ddfrac{\left(b_{#4}^{#3}({#1} \mid {#2})\right)^{\alpha}}{\sum_{u'}\left(b_{#4}^{#3}({#1} \mid u')\right)^{\alpha}}}
+\newcommand\spkr[4]{O_{#4}^{#3}({#2} \mid {#1})}
+\newcommand\speakerexp[4]{\ddfrac{e^{\alpha \ln(b_{#4}^{#3}({#1} \mid {#2}))}}{\sum_{u'}e^{\alpha \ln(b_{#4}^{#3}({#1} \mid u'))}}}
+\newcommand\speaker[4]{\ddfrac{\left(b_{#4}^{#3}({#1} \mid {#2})\right)^{\alpha}}{\sum_{u'}\left(b_{#4}^{#3}({#1} \mid u')\right)^{\alpha}}}
 % Ratio of utterance prob in different in different states.
 % Args s0,s1,u,d,i
-\newcommand\spkrrat[5]{\ddfrac{\left(\lstn{#1}{#3}{#4}{#5}\right)^{\alpha}\sum_{u'}\left(\lstn{#2}{u'}{#4}{#5}\right)^{\alpha}}{\left(\lstn{#2}{#3}{#4}{#5} \right)^{\alpha}\sum_{u'}\left(\lstn{#1}{u'}{#4}{#5}\right)^{\alpha}}}
-% \newcommand\spkrrat[5]{\ddfrac{\left(b_{#5}^{#4}({#1} \mid {#3})\right)^{\alpha}}{\sum_{u'}\left(\lstn{}{}{}{}\right)}}
+\newcommand\speakerrat[5]{\ddfrac{\left(\lstn{#1}{#3}{#4}{#5}\right)^{\alpha}\sum_{u'}\left(\lstn{#2}{u'}{#4}{#5}\right)^{\alpha}}{\left(\lstn{#2}{#3}{#4}{#5} \right)^{\alpha}\sum_{u'}\left(\lstn{#1}{u'}{#4}{#5}\right)^{\alpha}}}
+% \newcommand\speakerrat[5]{\ddfrac{\left(b_{#5}^{#4}({#1} \mid {#3})\right)^{\alpha}}{\sum_{u'}\left(\lstn{}{}{}{}\right)}}
 
 
 \def\ddfrac#1#2{\displaystyle\frac{\displaystyle #1}{\displaystyle #2}}
@@ -37,8 +40,8 @@
 % \section{Commands Test}
 % \begin{align}
 % 	O_i^d(u \mid s) &= \ddfrac{e^{\alpha \ln(b_i^d(s \mid u))}}{\sum_{u'}e^{\alpha \ln(b_i^d(s \mid u'))}}\\
-% 	&= \speaker{s}{u}{d}{i}\\
-% 	&= \spkr{s}{u}{d}{i}
+% 	&= \speakerexp{s}{u}{d}{i}\\
+% 	&= \speaker{s}{u}{d}{i}
 % \end{align}
 % \begin{align}
 % 	b_i^d(s \mid u) &= \ddfrac{O^{d-1}(u \mid s)b(s)}{\sum_{s'}O^{d-1}(u \mid s')b(s')}\\
@@ -50,7 +53,7 @@
     \item $b_i(s)$ is the listener's current belief in $s$
     \item $b^0(s \mid u)$ is the primitive interpretation of utterance $u$
     \item $b_i^d(s \mid u) = \listener{s}{u}{d}{i}$ would be the listener's updated belief if they interpreted $u$ with RSA of depth $d$
-    \item $O_i^d(u \mid s) = \speaker{s}{u}{d}{i} = \spkr{s}{u}{d}{i}$ is the probability of the speaker saying $u$ to communicate $s$ with RSA of depth $d$.
+    \item $O_i^d(u \mid s) = \speakerexp{s}{u}{d}{i} = \speaker{s}{u}{d}{i}$ is the probability of the speaker saying $u$ to communicate $s$ with RSA of depth $d$.
 \end{itemize}
 \section{Desired behavior}
 We hope that using the listener's current belief will allow utterances to have context-dependent meaning. As an example, we would like for a single, when spoken under belief $b_i$, to be evidence for $s_0$, but when spoken under $b_1$ act as evidence against $s_0$. 
@@ -60,14 +63,19 @@ Equivalently, we wish to find $b_i, b_j, b^0, d, \alpha, u, s_0, s_1$ s.t.
 \end{align}
 Substituting the speaker formulas gives
 \begin{align}
-	\ddfrac{\spkr{s_0}{u}{d}{i}}{\spkr{s_1}{u}{d}{i}} &> 1, && \ddfrac{\spkr{s_0}{u}{d}{j}}{\spkr{s_1}{u}{d}{j}} &< 1\\
-	\spkrrat{s_0}{s_1}{u}{d}{i} &> 1, && \spkrrat{s_0}{s_1}{u}{d}{j} &< 1
+	\ddfrac{\speaker{s_0}{u}{d}{i}}{\speaker{s_1}{u}{d}{i}} &> 1, && \ddfrac{\speaker{s_0}{u}{d}{j}}{\speaker{s_1}{u}{d}{j}} &< 1\\
+	\speakerrat{s_0}{s_1}{u}{d}{i} &> 1, && \speakerrat{s_0}{s_1}{u}{d}{j} &< 1
 \end{align}
 \begin{align}
 	\ddfrac{\lstna{s_0}{u}{d}{i}}{\lstna{s_1}{u}{d}{i}} > \ddfrac{\sum_{u'}\lstna{s_0}{u'}{d}{i}}{\sum_{u'}\lstna{s_1}{u}{d}{i}}, && \ddfrac{\lstna{s_0}{u}{d}{j}}{\lstna{s_1}{u}{d}{j}} < \ddfrac{\sum_{u'}\lstna{s_0}{u'}{d}{j}}{\sum_{u'}\lstna{s_1}{u}{d}{j}}
 \end{align}
 
 \subsection{Unraveled recursion formula}
+\begin{align}
+\spkr{s}{u}{d}{i} &= \speaker{s}{u}{d}{i}\\
+&= \ddfrac{\al{\listener{s}{u}{d}{i}}}{\sum_{u'}\al{\listener{s}{u'}{d}{i}}}
+\end{align}
+
 % \begin{align}
 %     O_i^d(u \mid s_0) &= \ddfrac{e^{\alpha \ln\left(b_i^d(s_0 \mid u)\right)}}{\sum_{u'}e^{\alpha \ln\left(b_i^d(s_0 \mid u')\right)}}\\
 %     &= \ddfrac{\left(b_i^d(s_0 \mid u)\right)^{\alpha}}{\sum_{u'}\left(b_i^d(s_0 \mid u')\right)^{\alpha}}\\
@@ -80,4 +88,6 @@ Write out desired behavior explicitly, find solution.
 Uncurl recursion to see the effects of different initial belief after multiple steps.
 
 Run simulations until a good example is found. Will need to write out theory of why that example works afterwards.
+
+Plot ending v initial belief, ratio of speaker probs v initial belief. We can let the two independent dimensions belong to the initial belief, third dimension (color) can be ratio of probabilities
 \end{document}
