@@ -70,8 +70,10 @@ class RSAExplorer():
 			rsa = RSA(listener_prior=self.belief_points[b_id], **self.rsa_args)
 			self.speaker_probs[b_id,:,:] = rsa.run()
 		return self.speaker_probs
-	def display(self, u_id = 0, condition_states = (0,1)):
+	def display(self, u_id = 1, condition_states = (0,1)):
 		speaker_ratios = np.true_divide(self.speaker_probs[:,condition_states[0],u_id],self.speaker_probs[:,condition_states[1],u_id])
+		print("Max ratio: {}".format(np.amax(speaker_ratios)))
+		print("Min ratio: {}".format(np.amin(speaker_ratios)))
 		title = "P({} | {}) / P({} | {})".format(self.vocab[u_id],self.items[condition_states[0]], self.vocab[u_id],self.items[condition_states[1]])
 		axis_labels = (str(self.items[0]), str(self.items[1]))
 		plotBeliefSimplex(self.belief_points,speaker_ratios, title=title, axis_labels=axis_labels)

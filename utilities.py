@@ -122,3 +122,18 @@ def get_belief_grid(num_states, resolution):
 		print(worst_g)
 		raise ValueError("Fruedenthal created belief with error " + str(max(errors)))
 	return grid_normal
+
+def list_depth(l):
+	"""Empty list returns 1"""
+	d = 0
+	if len(l) == 0:
+		return 1
+	running = True
+	while running:
+		try:
+			l = l[0]
+			d += 1
+		except:
+			running = False
+	return d
+

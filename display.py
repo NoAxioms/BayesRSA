@@ -53,7 +53,7 @@ def createBeliefFigure(belief, items, observation = "N/A", save_location = None,
 	# plt.clf()
 	# return fig
 
-def plotBeliefSimplex(belief_list, values, value_scale = 100, start_color = (0.0,0.0,1.0), end_color = (1.0,0.0,0.0), title = "", axis_labels = ("","")):
+def plotBeliefSimplex(belief_list, values, value_scale = 2, start_color = (0.0,0.0,1.0), end_color = (1.0,0.0,0.0), title = "", axis_labels = ("","")):
 	"""
 	Currently only works for 3 dimensional belief
 	Change to use images
@@ -67,7 +67,7 @@ def plotBeliefSimplex(belief_list, values, value_scale = 100, start_color = (0.0
 	for v_id in range(values.shape[0]):
 		t = expit(values[v_id]/value_scale)
 		# print("t: {}".format(t))
-		c = [start_color[i] * t + end_color[i] * (1.0 - t) for i in range(3)]
+		c = [start_color[i] * t + end_color[i] * (1.0 - t) for i in range(3)] + [0.9]
 		# print(c)
 		assert np.max(c) <= 1.0
 		assert np.min(c) >= 0
@@ -75,12 +75,9 @@ def plotBeliefSimplex(belief_list, values, value_scale = 100, start_color = (0.0
 	colors = np.array(colors)
 	#Plot
 	fig, ax = plt.subplots()
-	# ax.set_ylim(bottom=-0.05, top=1.05)
-	# ax.set_xlim(left=-0.05, right=1.05)
-	color_test = [(0.5,0.1,0.0) for r in range(len(belief_list))]
 	scat = plt.scatter(list(unzipped_beliefs[0]),list(unzipped_beliefs[1]), c=colors)
-	# scat = plt.scatter([0,.5,.3],[1,.5,.7], c=['r','g','b'])
 	plt.suptitle(title)
 	plt.xlabel(axis_labels[0])
 	plt.ylabel(axis_labels[1])
 	plt.show()
+
