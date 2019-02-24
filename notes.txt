@@ -1,1 +1,13 @@
 I had hypothesized that given a totally ordered set of items of length n, it would take RSA of depth n-1 for the listener to understand that each item has a uniquely identifying word. This is false. At depth 1, the terms pull apart from eachother, and increasing depth just sharpens the distinctions. When is greater depth desired vs. higher soft-max parameter?	
+
+Use QT for 2d interface (s/out sam title)
+Make robots play Guess Who (s/out sam title)
+	Find research on Guess Who and RSA/ bounds of human rationality
+
+BUG
+	"""
+	faces = generate_items(3)
+	rsa_config = {"theta":25, "default_depth":26}
+	glasses
+	Prefers hat over moustache. Why the asymmetry?
+	"""

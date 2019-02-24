@@ -9,6 +9,6 @@ if __name__ == "__main__":
 	# 	standard_faces = json.load(f)
 	# 	faces = tuple(x.split(" ") for x in standard_faces["faces_classic"])
 	faces = generate_items(3)
-	rsa_config = {"theta":10, "default_depth":1}
+	rsa_config = {"theta":25, "default_depth":26}
 	bf = BayesFilter(items=faces, rsa_config=rsa_config, name="Interactive")
 	bf.simulate(s_id = 1,interactive=True, depth=90, update_rsa_prior=True)

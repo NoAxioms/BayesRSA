@@ -24,7 +24,7 @@ class BayesFilter():
 		self.transitionMatrix = transitionMatrix if transitionMatrix is not None else np.identity(len(items)) #[s][s']
 		self.num_simulations = 0
 
-	def simulate(self,s_id,depth=1,b=None, save_trajectories = True, save_images = False, update_rsa_prior = True, interactive=False):
+	def simulate(self,s_id=0,depth=1,b=None, save_trajectories = True, save_images = False, update_rsa_prior = True, interactive=False, observation_sequence = ()):
 		"""
 		TODO: Allow beliefs to be viewed while simulation is still running. 
 		"""
@@ -39,9 +39,13 @@ class BayesFilter():
 		if save_images or interactive:
 			save_location = self.record_path + "/{}_0.png".format(self.num_simulations - 1) if save_images else None
 			createBeliefFigure(b,self.items,"START",save_location=save_location, des_id=s_id,display_now=interactive)
+		if observation_sequence != (): depth=len(observation_sequence)
 		for d in range(depth):
 			observationMatrix = self.getObservationMatrix(b) if update_rsa_prior else self.getObservationMatrix(b0)
-			if interactive:
+			if observation_sequence != ():
+				o = observation_sequence[d]
+				o_id = self.vocab.index(o)
+			elif interactive:
 				#Prompt user for observation
 				o = input("Observation: ")
 				o_id = self.vocab.index(o)
@@ -67,6 +71,7 @@ class BayesFilter():
 			with open(self.record_path + json_name,'w') as f:
 				json.dump(data,f, indent=4)
 		return belief_list, o_list
+
 	def update(self,b,o_id, obs_mat = None):
 		if type(o_id) is not int:
 			raise TypeError('Need index of observation')
