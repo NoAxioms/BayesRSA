@@ -10,4 +10,8 @@ BUG
 	rsa_config = {"theta":25, "default_depth":26}
 	glasses
 	Prefers hat over moustache. Why the asymmetry?
+
+	hat moustache leads to hat, moustache, glasses, with updated priors on or off. THis seems irrational
+
+	Lowering depth to 8 fixes this. Seems like a precision error.
 	"""
