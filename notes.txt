@@ -1,0 +1,1 @@
+I had hypothesized that given a totally ordered set of items of length n, it would take RSA of depth n-1 for the listener to understand that each item has a uniquely identifying word. This is false. At depth 1, the terms pull apart from eachother, and increasing depth just sharpens the distinctions. When is greater depth desired vs. higher soft-max parameter?	

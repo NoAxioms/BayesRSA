@@ -1,4 +1,0 @@
-Find examples where updating the listener prior improves performance.
-Strategies:
-	Do the math
-	Run parameterized simulations until a good domain is found

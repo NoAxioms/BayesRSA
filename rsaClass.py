@@ -48,6 +48,7 @@ class RSA():
 		s += "\nSpeaker_{} [s][u]:\n{}".format(self.cur_depth,self.speaker_probs)
 		s += "\nListener_{} [u][s]:\n{}".format(self.cur_depth,self.listener_probs)
 		return s
+		
 class RSAExplorer():
 	"""
 	Run RSA with different parameters and plot results. Currently only works with dimension 3

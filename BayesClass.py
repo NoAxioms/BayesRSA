@@ -5,6 +5,10 @@ from utilities import bayes_rule, uniform
 from item_generator import generate_items
 import matplotlib.pyplot as plt
 from display import createBeliefFigure
+try:
+	input
+except:
+	input = raw_input
 # np.random.seed(seed=0)
 #TODO 
 class BayesFilter():
@@ -20,7 +24,7 @@ class BayesFilter():
 		self.transitionMatrix = transitionMatrix if transitionMatrix is not None else np.identity(len(items)) #[s][s']
 		self.num_simulations = 0
 
-	def simulate(self,s_id,depth=1,b=None, save_trajectories = True, save_images = False, update_rsa_prior = True):
+	def simulate(self,s_id,depth=1,b=None, save_trajectories = True, save_images = False, update_rsa_prior = True, interactive=False):
 		"""
 		TODO: Allow beliefs to be viewed while simulation is still running. 
 		"""
@@ -32,18 +36,25 @@ class BayesFilter():
 		if (save_images or save_trajectories):
 			self.num_simulations += 1
 			if not os.path.isdir(self.record_path):	os.mkdir(self.record_path)
-		if save_images:
-			createBeliefFigure(b,self.items,"START",save_location=self.record_path + "/{}_0.png".format(self.num_simulations - 1), des_id=s_id)
+		if save_images or interactive:
+			save_location = self.record_path + "/{}_0.png".format(self.num_simulations - 1) if save_images else None
+			createBeliefFigure(b,self.items,"START",save_location=save_location, des_id=s_id,display_now=interactive)
 		for d in range(depth):
 			observationMatrix = self.getObservationMatrix(b) if update_rsa_prior else self.getObservationMatrix(b0)
-			#Sample observation
-			o_id = np.random.choice(observationMatrix.shape[1],p=observationMatrix[s_id])
+			if interactive:
+				#Prompt user for observation
+				o = input("Observation: ")
+				o_id = self.vocab.index(o)
+			else:
+				#Sample observation
+				o_id = np.random.choice(observationMatrix.shape[1],p=observationMatrix[s_id])
 			#Update based on transition and observation
 			b = self.update(b,o_id, observationMatrix)
 			o_list.append(self.vocab[o_id])
 			belief_list.append(b)
-			if save_images:
-				createBeliefFigure(b,self.items,self.vocab[o_id],save_location=self.record_path + "/{}_{}.png".format(self.num_simulations - 1, d + 1),des_id=s_id)
+			if save_images or interactive:
+				save_location = self.record_path + "/{}_{}.png".format(self.num_simulations - 1, d + 1) if save_images else None
+				createBeliefFigure(b,self.items,self.vocab[o_id],save_location=save_location,des_id=s_id,display_now=interactive)
 			# displayDistribution(b,self.items)
 		if save_trajectories:
 			json_name = "simulation{}.json".format(self.num_simulations - 1)

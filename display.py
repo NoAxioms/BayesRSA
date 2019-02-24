@@ -1,11 +1,13 @@
 import os, copy
 import numpy as np
 from scipy.special import expit
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import pylab as pl
 from face_maker import item_to_image_path
 image_directory = os.path.dirname(os.path.realpath(__file__)) + "/images/"
+mpl.rcParams["toolbar"] = "None"
 # img=mpimg.imread(image_directory + "face.png")
 # active_distribution=0
 #TODO RuntimeWarning: More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory.
@@ -20,7 +22,7 @@ def createBeliefFigure(belief, items, observation = "N/A", save_location = None,
 	# bar_width = 1.0/(1.5 * num_items)
 	bar_width = 0.05
 	locs = [float(i + 1.0)/(num_items+1)-0.05 for i in range(num_items)]
-	fig, ax = plt.subplots()
+	fig, ax = plt.subplots(figsize=(10, 5), dpi=400)
 
 	ax.set_xlim(left=0,right=1)
 	ax.set_ylim(bottom=0,top=1)
@@ -46,6 +48,10 @@ def createBeliefFigure(belief, items, observation = "N/A", save_location = None,
 	if des_id is not None:
 		bar.patches[des_id].set_color('r')
 	if display_now:
+		try:
+			plt.get_current_fig_manager().window.showMaximized() #Only works on QT backend
+		except:
+			pass
 		plt.show()
 	if save_location is not None:
 		plt.savefig(save_location)
