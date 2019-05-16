@@ -11,6 +11,8 @@ from torch.distributions import constraints
 from pyro import poutine
 from pyro.infer import SVI, Trace_ELBO, TraceEnum_ELBO, config_enumerate, infer_discrete
 from pyro.contrib.autoguide import AutoDiagonalNormal
+from pyro.optim import Adam
+
 
 # from rsaClass import RSA
 # from utilities import softmax
@@ -23,6 +25,7 @@ def normalize(x):
 	"""
 	Normalizes 2d tensor so that x.sum(1)[i] = 1.0
 	TODO make dim argument
+	TODO make work with broadcasting for enumeration stuff
 	"""
 	assert len(x.shape) == 2, x.shape
 	d = x.sum(dim=1).repeat(x.shape[1]).reshape(x.shape[1],x.shape[0]).transpose(0,1)
@@ -37,7 +40,7 @@ def softmax(x, theta = 1.0):
 	# print("den:\n{}".format(denominators))
 	# return (exponentiated.transpose(0,1) / denominators).transpose(0,1)
 
-def bayes_rule(b,a_cond_b, a=None, debug = True):
+def bayes_rule(b,a_cond_b, a=None, debug = False):
 	"""
 	:param a: Prob(a) matrix
 	:param b: Prob(b) matrix
@@ -90,40 +93,41 @@ def rsa(s_0, listener_prior = None,depth=1, theta = 5.):
 		s_2 = softmax(l_1,theta=theta) #[s][u]
 	return s_2
 
-def model():
+def model(target_item = 0, num_utterances_heard = 10, utterances_heard = None):
 	num_items = 3
 	vocab_size = 3
-	utterance_length = 3
 	item_plate = pyro.plate('item_plate', num_items, dim=-2)
 	vocab_plate = pyro.plate('vocab_plate', vocab_size, dim=-1)
 	with item_plate, vocab_plate:
-		item_vocabs = pyro.sample("item_vocabs", dist.Bernoulli(0.5 * torch.ones(num_items,vocab_size)))
-	literal_listener_probs = item_vocabs.clone().detach() #should we detach?
-	literal_listener_probs_denominators = torch.sum(literal_listener_probs, dim=1)
-	literal_listener_probs /= literal_listener_probs_denominators
+		item_vocabs = pyro.sample("item_vocabs", dist.Bernoulli(0.5))
 	print("item_vocabs:\n{}".format(item_vocabs))
-	print("literal_listener_probs:\n{}".format(literal_listener_probs))
-	
-	#Get pragmatic speaker probs
-	speaker_probs = softmax(literal_listener_probs, theta=5.0)
-
-	print("speaker_probs:\n{}".format(speaker_probs))
-
+	s_1 = rsa(s_0 = item_vocabs)
+	#Should use histogram instead of sequence of utterances
+	utterance_plate = pyro.plate('utterance_plate', num_utterances_heard, dim=-3)
+	with utterance_plate:
+		utterances_heard = pyro.sample('utterances_heard',dist.Categorical(s_1[target_item]), obs=utterances_heard)
+	print("utterances_heard:\n",utterances_heard)
+	return s_1
+		
 def guide():
-	num_items = 3
-	vocab_size = 3
-	item_plate = pyro.plate('item_plate', num_items, dim=-2)
-	vocab_plate = pyro.plate('vocab_plate', vocab_size, dim=-1)
-	with item_plate, vocab_plate:
-		item_vocabs = pyro.sample("item_vocabs", dist.Bernoulli(0.5 * torch.ones(num_items,vocab_size)))
-	# literal_listener_probs = item_vocabs
-	# for item_num in range(num_items):
-	# 	literal_listener_probs[item_num] /= literal_listener_probs[item_num].sum()
-	print("item_vocabs:\n{}".format(item_vocabs))
-	# print("literal_listener_probs:\n{}".format(literal_listener_probs))
+	pass
+# def guide(target_item = 0, num_utterances_heard = 5, utterances_heard = None):
+# 	num_items = 3
+# 	vocab_size = 3
+# 	item_plate = pyro.plate('item_plate', num_items, dim=-2)
+# 	vocab_plate = pyro.plate('vocab_plate', vocab_size, dim=-1)
+# 	with item_plate, vocab_plate:
+# 		item_vocabs = pyro.sample("item_vocabs", dist.Bernoulli(0.5 * torch.ones(num_items,vocab_size)))
+# 	print("item_vocabs:\n{}".format(item_vocabs))
+# 	s_1 = rsa(s_0 = item_vocabs)
+# 	utterance_plate = pyro.plate('utterance_plate', num_utterances_heard, dim=-3)
+# 	with utterance_plate:
+# 		#I think the distribution shape is wrong. Check.
+# 		utterances_heard = pyro.sample('utterances_heard',dist.Categorical(s_1[target_item] * torch.ones(num_utterances_heard,vocab_size)), obs=utterances_heard)
+# 	return s_1
 
-# elbo = TraceEnum_ELBO(max_plate_nesting=0)
-# elbo.loss(model, config_enumerate(guide, "parallel"));
+
+
 def bayes_rule_test(): #pass
 	# q = torch.tensor([[1.,1.],[1.,1.]])
 	# w = torch.tensor([[2.,3.], [2.,2.]])
@@ -161,7 +165,15 @@ def softmax_test():
 	assert l1_distance(b,b_true) < 0.001, l1_distance(b,b_true)
 def l1_distance(a,b):
 	return torch.abs(a - b).sum()
+def main():
+	data = torch.tensor([0] * 10)
+	pyro.clear_param_store()
+	elbo = TraceEnum_ELBO(max_plate_nesting=3)
+	elbo.loss(model, guide);
 if __name__ == "__main__":
+	main()
+	# elbo = TraceEnum_ELBO(max_plate_nesting=3)
+	# elbo.loss(model, config_enumerate(model, "sequential")); #sequenial and parallel break in different ways.
 	# elbo = Trace_ELBO()
-	# elbo.loss(model, guide);
+	# elbo.loss(model, model);
 	# rsa_test()
