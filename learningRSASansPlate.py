@@ -96,7 +96,6 @@ def rsa(s_0, listener_prior = None,depth=1, theta = 5.):
 def model(target_item = 0, num_utterances_heard = 5, utterances_heard = None, use_rsa=False):
 	num_items = 3
 	vocab_size = 3
-	#I probably need to convert these to sequential plates since they couple downstream
 	item_plate = pyro.plate('item_plate', num_items, dim=-2)
 	vocab_plate = pyro.plate('vocab_plate', vocab_size, dim=-1)
 	with item_plate, vocab_plate:
