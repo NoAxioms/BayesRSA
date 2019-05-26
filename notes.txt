@@ -1,17 +1,17 @@
-I had hypothesized that given a totally ordered set of items of length n, it would take RSA of depth n-1 for the listener to understand that each item has a uniquely identifying word. This is false. At depth 1, the terms pull apart from eachother, and increasing depth just sharpens the distinctions. When is greater depth desired vs. higher soft-max parameter?	
+Enumeration:
+	When we enumerate a variable, we do not need to mention it in guide? Why?
+	Enumeration does not allow you to predict values of discrete variables, unless you use infer_discrete
+	first_available_dim = -1 - max_plate_nesting
+	infer_discrete does MAP when passed temperature=0
+	infer_discrete produces correct samples, but incorrect logprobs.
+		Can I still use it to learn item-attribute relations?
 
-Use QT for 2d interface (s/out sam title)
-Make robots play Guess Who (s/out sam title)
-	Find research on Guess Who and RSA/ bounds of human rationality
+	Restriction 2: no downstream coupling. 
 
-BUG
-	"""
-	faces = generate_items(3)
-	rsa_config = {"theta":25, "default_depth":26}
-	glasses
-	Prefers hat over moustache. Why the asymmetry?
 
-	hat moustache leads to hat, moustache, glasses, with updated priors on or off. THis seems irrational
+Base Speaker Form
+	If we assume base speaker comes from attributes, we can more easily do attribute grouping (ex. noticing that red and blue are colors and contradictory)
+	If we assume base speaker is sampled from dirichlet, we can account for more subtle effects. 
+	Sample complexity is Very important here. Attribute-based seems more efficient b.c. it is binary v continuous.
 
-	Lowering depth to 8 fixes this. Seems like a precision error.
-	"""
+How to make item vocabs parameters in guide? Check out lda notebook.
