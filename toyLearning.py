@@ -122,6 +122,7 @@ def guide(target_item = 0, num_utterances_heard = 5, utterances_heard = None, us
 	item_plate = pyro.plate('item_plate', num_items)
 	vocab_plate = pyro.plate('vocab_plate', vocab_size)
 	item_vocabs = torch.empty(num_items,vocab_size + 1)
+	#TODO use constraint.boolean and make parameter
 	for item_num in item_plate:
 		item_vocabs[item_num][-1] = 1
 		for word_num in vocab_plate:

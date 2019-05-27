@@ -1,0 +1,18 @@
+I am trying to infer the items' vocabularies given a set of utterances for each item. (Currently it is written to give a set for a single item. Rewrite into item-utterance pairs? How will I actually train it irl?).
+My issue is that I don't know how to parameterize the guide function so that I can do SVI. I want to make the item vocabularies the parameters, but I sample these in the model, so must sample them in the guide. Also, they are booleans, can you do SVI with boolean parameters? Nope. Fritzo linked to Bayesian optimization (http://pyro.ai/examples/bo.html).**
+If I make base speaker continuous, can I still cluster attributes (notice that red and blue are mutually exclusive)? Maybe use thresholding?
+Would a continuous speaker train quickly enough? Is histogram building simply better than SVI at this scale? Try to analytically invert RSA.
+
+In my model, I sample the speaker distributions. In the guide, I want to directly parameterize the speaker distributions. 
+Options:
+		Don't sample speaker distributions in model. Instead, directly sample language, and only use explicit speaker distributions in guide. 
+			Q: How does the model affect SVI, given observations? If the only sampled sites are utterances, can we use a garbage model with a well structured guide?
+			In SVI, we optimize parameters and get a posterior over latents. Since I want to update my speaker model online, a posterior seems preferable to an argmax. DO I need a distribution over speaker distributions, or just the speaker distribution? My model is currently written for the former, sampling the utterance directly without constructing the speaker distribution in the model is the the latter. If I sample the utterance directly, how do I express that the utterances are sampled from the same speaker distribution, and that I do not know this distribution? 
+			If I have a small set of utterances, the belief over speaker distributions could be a dirichlet and updated directly. How would I do a direct update filtered through RSA? For large set of utterances, need I use an NN?
+
+			Use dirichle
+
+
+**In BO, we try to find x* = argmin f(x) where we do not have the gradient of f. We do this by pikcing a prior on f, constructing a cheap acquisition function alpha and using it to find interesting points at which to evaluate f, and updating f accordingly.
+
+Online Updates: Use posterior as prior https://forum.pyro.ai/t/online-updates-of-guide/352
