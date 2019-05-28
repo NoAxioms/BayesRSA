@@ -34,3 +34,8 @@ Trains too slowly in current form and doesnt seem to properly converge (training
 
 
 3 items, 3 utterances, diagonal distribution takes 1000 steps to converge. 6.9 seconds with rsa, 5.7 without
+
+TODO: Incorporate multiple contexts. This is where the rsa nature should shine.
+
+!!! I could blend together low, mid, and high sample complexity methods. At very low sample data, use direct histogram type methods (initialize s_0 as histogram). At mid, use this model. At high, use NN. The current rsa pyro method may take upwards of 7 seconds to converge, but scales well with data. 
+Should act based on most probable s_0 based on dirichlet concentration.

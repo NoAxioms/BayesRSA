@@ -202,24 +202,33 @@ def softmax_test():
 def l1_distance(a, b):
 	return torch.abs(a - b).sum()
 
-
-def main():
-	use_rsa=False
-	#generate test data
-	num_items = 3
-	num_utterances_per_item = 1000
-	# utterances_by_item = torch.tensor([[0] * n, [1] * n, [2] * n])
-	s_0_true = normalize(torch.tensor([[1,0,0],[1,1,0],[1,1,1]], dtype=torch.float))
-	s_2_true = rsa(s_0_true)
-
+def generate_data(s_0_true = None, num_utterances_per_item=1000, theta = 5.):
+	if s_0_true is None:
+		s_0_true = normalize(torch.tensor([[1,0,0],[1,1,0],[1,1,1]], dtype=torch.float))
+	num_items = s_0_true.shape[0]
+	s_2_true = rsa(s_0_true, theta=theta)
 	utterances_by_item = torch.empty(size=(num_items, num_utterances_per_item))
 	for target_item in range(num_items):
 		for utt in range(num_utterances_per_item):
-			# print("~~~~~~~~~~~~~~")
-			# print(dist.Categorical(s_2_true).sample())
 			utterances_by_item[target_item][utt] = dist.Categorical(s_2_true[target_item]).sample()
-
+	return utterances_by_item.long()
+def main():
+	use_rsa=False
+	#generate test data
+	# utterances_by_item = torch.tensor([[0] * n, [1] * n, [2] * n])
+	num_items = 3
+	s_0_true = normalize(torch.tensor([[1,0,0],[1,1,0],[1,1,1]], dtype=torch.float))
+	utterances_by_item = generate_data(s_0_true=s_0_true)
+	max_utterance_id = utterances_by_item.max()
+	print(max_utterance_id)
+	utterance_counts = torch.empty(size=(3, 2 + 1))
+	for item in range(num_items):
+		utterance_counts[item] = utterances_by_item[item].bincount()
+	utterance_probs_empirical = normalize(utterance_counts)
+	print("utterance_probs_empirical:\n{}".format(utterance_probs_empirical))
 	pyro.clear_param_store()
+	#Initialize speaker concentrations based on empirical distribution of utterances.
+	pyro.param("speaker_concentrations", utterance_probs_empirical, constraint=constraints.positive)
 	# guide = AutoDiagonalNormal(model)
 
 	# elbo = TraceEnum_ELBO(max_plate_nesting=3)
@@ -233,7 +242,7 @@ def main():
 	for step in range(n_steps):
 		# target_item = target_items[step % len(target_items)]
 		# assert utterances_by_item[target_item][0] == target_item, "{} {}".format(target_item, utterances_by_item[target_item][0])
-		verbose = False and ((not step % 100) or (step == n_steps -1))
+		verbose = True and ((not step % 100) or (step == n_steps -1))
 		if step == n_steps -1:
 			print("~~~~~~~~~~~~~")
 		if verbose:
