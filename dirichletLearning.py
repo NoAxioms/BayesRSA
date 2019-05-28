@@ -225,6 +225,7 @@ def main():
 	for item in range(num_items):
 		utterance_counts[item] = utterances_by_item[item].bincount()
 	utterance_probs_empirical = normalize(utterance_counts)
+	#TODO make sure no element of utterance_probs_empirical is 0, otherwise we cannot use it as concentration parameter.
 	print("utterance_probs_empirical:\n{}".format(utterance_probs_empirical))
 	pyro.clear_param_store()
 	#Initialize speaker concentrations based on empirical distribution of utterances.
