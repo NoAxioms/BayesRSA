@@ -101,7 +101,7 @@ def rsa(s_0, listener_prior=None, depth=1, theta=5.):
 	return s_2
 
 
-def model(target_item=0, num_utterances_heard=5, utterances_heard=None, use_rsa=False, verbose=True):
+def model(utterances_heard=None, use_rsa=True, verbose=True):
 	num_items = 3
 	vocab_size = 3
 	item_plate = pyro.plate('item_plate', num_items)
@@ -121,15 +121,17 @@ def model(target_item=0, num_utterances_heard=5, utterances_heard=None, use_rsa=
 	if verbose: print("model s_0:\n{}".format(s_0))
 	s_2 = rsa(s_0=s_0) if use_rsa else s_0  # [s][u]
 	# Should use histogram instead of sequence of utterances
-	utterance_plate = pyro.plate('utterance_plate', num_utterances_heard, dim=-1)
-	with utterance_plate as u_id:
-		utterances_heard = pyro.sample('utterances_heard', dist.Categorical(
-			s_2[target_item]), obs=utterances_heard)  # [u_id]
+	#TODO adjust to that we can have different number of utterances for each item
+	utterance_plate = pyro.plate('utterance_plate', utterances_heard.shape[1], dim=-1)
+	for target_item in item_plate:
+		with utterance_plate as u_id:
+			pyro.sample('utterances_heard_{}'.format(target_item), dist.Categorical(
+				s_2[target_item]), obs=utterances_heard[target_item])  # [u_id]
 	if verbose: print("model utterances_heard:\n", utterances_heard)
-	return s_2
+	return s_0
 
 
-def guide(target_item=0, num_utterances_heard=5, utterances_heard=None, use_rsa=False, verbose=True):
+def guide(utterances_heard=None, use_rsa=True, verbose=True):
 	num_items = 3
 	vocab_size = 3
 	item_plate = pyro.plate('item_plate', num_items)
@@ -149,12 +151,12 @@ def guide(target_item=0, num_utterances_heard=5, utterances_heard=None, use_rsa=
 	if verbose: print("guide s_0:\n{}".format(s_0))
 	s_2 = rsa(s_0=s_0) if use_rsa else s_0  # [s][u]
 	# Should use histogram instead of sequence of utterances
-	utterance_plate = pyro.plate('utterance_plate', num_utterances_heard, dim=-1)
+	utterance_plate = pyro.plate('utterance_plate', utterances_heard.shape[1], dim=-1)
 	# with utterance_plate as u_id:
 	# 	utterances_heard = pyro.sample('utterances_heard', dist.Categorical(
 	# 		s_2[target_item]), obs=utterances_heard)  # [u_id]
-	if verbose: print("guide utterances_heard:\n", utterances_heard)
-	return s_2
+	# if verbose: print("guide utterances_heard:\n", utterances_heard)
+	return s_0
 
 
 def bayes_rule_test():  # pass
@@ -202,20 +204,22 @@ def l1_distance(a, b):
 
 
 def main():
+	use_rsa=False
 	#generate test data
-	utterances_by_item = torch.tensor([[0] * 5, [1] * 5, [2] * 5])
+	n = 1
+	utterances_by_item = torch.tensor([[0] * n, [1] * n, [2] * n])
 	# utterances = torch.tensor([0] * 5 + [1] * 5 + [2] * 5)
 	m = 1
 	# target_items = [0] * m + [1] * m + [2] * m #could plate this. Could rewrite model/guide to take set of utterances for each item.
 	#Training with only one target_item per step may be bad.
-	target_items = [1] * m + [2] * m + [0] * m
+	target_items = [0] * m + [1] * m + [2] * m
 
 	pyro.clear_param_store()
 	# guide = AutoDiagonalNormal(model)
 
 	# elbo = TraceEnum_ELBO(max_plate_nesting=3)
 	# elbo.loss(model, guide);
-	adam_params = {"lr": 0.05, "betas": (0.95, 0.999)}
+	adam_params = {"lr": 0.005, "betas": (0.95, 0.999)}
 	optimizer = Adam(adam_params)
 	svi = SVI(model, guide, optimizer, loss=Trace_ELBO())
 	n_steps = 1000
@@ -224,14 +228,14 @@ def main():
 	for step in range(n_steps):
 		target_item = target_items[step % len(target_items)]
 		# assert utterances_by_item[target_item][0] == target_item, "{} {}".format(target_item, utterances_by_item[target_item][0])
-		verbose = (not step % 100) or (step == n_steps -1)
+		verbose = False and ((not step % 100) or (step == n_steps -1))
 		if step == n_steps -1:
 			print("~~~~~~~~~~~~~")
 		if verbose:
 			print('step: {}'.format(step))
-		svi.step(target_item = target_item, utterances_heard = utterances_by_item[target_item], verbose = verbose)  #It is not always using the data as observation. Why?
+		svi.step(utterances_heard = utterances_by_item, verbose = verbose, use_rsa=use_rsa)  #It is not always using the data as observation. Why?
 	end_time = time.time()
-	s_2 = guide(target_item=0)
+	s_2 = guide(use_rsa=use_rsa, utterances_heard=utterances_by_item)
 	print("total time: {}".format(end_time - start_time))
 	# print("final s_2:\n{}".format(s_2))
 if __name__ == "__main__":

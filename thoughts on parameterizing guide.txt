@@ -31,3 +31,6 @@ When training on utterances all 0, desired item 0, end up with speaker probs lar
 
 Trains too slowly in current form and doesnt seem to properly converge (training data had one unique word per item, had probs .95, .83, .95)
 	Used concentration_parameter in model as well as guide, now converges very quickly.
+
+
+3 items, 3 utterances, diagonal distribution takes 1000 steps to converge. 6.9 seconds with rsa, 5.7 without
