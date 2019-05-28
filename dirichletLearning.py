@@ -149,7 +149,7 @@ def guide(utterances_heard=None, use_rsa=True, verbose=True):
 	# I probably need to convert these to sequential plates since they couple downstream
 
 	if verbose: print("guide s_0:\n{}".format(s_0))
-	s_2 = rsa(s_0=s_0) if use_rsa else s_0  # [s][u]
+	# s_2 = rsa(s_0=s_0) if use_rsa else s_0  # [s][u]
 	# Should use histogram instead of sequence of utterances
 	utterance_plate = pyro.plate('utterance_plate', utterances_heard.shape[1], dim=-1)
 	# with utterance_plate as u_id:
@@ -206,13 +206,18 @@ def l1_distance(a, b):
 def main():
 	use_rsa=False
 	#generate test data
-	n = 1
-	utterances_by_item = torch.tensor([[0] * n, [1] * n, [2] * n])
-	# utterances = torch.tensor([0] * 5 + [1] * 5 + [2] * 5)
-	m = 1
-	# target_items = [0] * m + [1] * m + [2] * m #could plate this. Could rewrite model/guide to take set of utterances for each item.
-	#Training with only one target_item per step may be bad.
-	target_items = [0] * m + [1] * m + [2] * m
+	num_items = 3
+	num_utterances_per_item = 1000
+	# utterances_by_item = torch.tensor([[0] * n, [1] * n, [2] * n])
+	s_0_true = normalize(torch.tensor([[1,0,0],[1,1,0],[1,1,1]], dtype=torch.float))
+	s_2_true = rsa(s_0_true)
+
+	utterances_by_item = torch.empty(size=(num_items, num_utterances_per_item))
+	for target_item in range(num_items):
+		for utt in range(num_utterances_per_item):
+			# print("~~~~~~~~~~~~~~")
+			# print(dist.Categorical(s_2_true).sample())
+			utterances_by_item[target_item][utt] = dist.Categorical(s_2_true[target_item]).sample()
 
 	pyro.clear_param_store()
 	# guide = AutoDiagonalNormal(model)
@@ -226,7 +231,7 @@ def main():
 	# do gradient steps
 	start_time = time.time()
 	for step in range(n_steps):
-		target_item = target_items[step % len(target_items)]
+		# target_item = target_items[step % len(target_items)]
 		# assert utterances_by_item[target_item][0] == target_item, "{} {}".format(target_item, utterances_by_item[target_item][0])
 		verbose = False and ((not step % 100) or (step == n_steps -1))
 		if step == n_steps -1:
