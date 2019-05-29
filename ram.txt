@@ -1,0 +1,21 @@
+~~~~~~~~TODO~~~~~~~~
+~~Short Term:~~
+Incorporate multiple contexts. This is where the rsa nature should shine.
+Convert data to histogram format.
+
+~~Medium Term~~
+Allow flexible vocabulary size. Transform datastructure when new words/objects are introduced.
+Play around with initialization schemes - ex. use histogram to initialize dirichlet prior concentrations.
+~~Longer Term~~
+Network with existing language/vision tools so that this acts as a complement.
+
+
+Tricks to be used:
+Online Updates: Use posterior as prior https://forum.pyro.ai/t/online-updates-of-guide/352
+
+
+Thoughts:
+An ideal system uses all the tricks.
+We could blend together low, mid, and high sample complexity methods. At very low sample data, use direct histogram type methods (initialize s_0 as histogram). At mid, use this model. At high, use NN. The current rsa pyro method may take upwards of 7 seconds to converge, but scales well with data. Use existing networks when applicable for final version.
+Should act based on most probable s_0 based on dirichlet concentration.
+
