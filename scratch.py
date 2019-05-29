@@ -16,16 +16,15 @@ assert pyro.__version__.startswith('0.3.1')
 pyro.enable_validation()
 pyro.set_rng_seed(0)
 # torch.set_printoptions(precision=3, sci_mode=False)  #Need to update pytorch to toggle sci_mode
-# for i in range(10):
-# 	t = dist.Dirichlet(torch.tensor([1000,1000,.0002])).sample()
-# 	print(t)
 
-a = torch.tensor([1,2,3,3,3,5])
-print(a.dtype)
-b = a.bincount()
-c = torch.tensor([1.,3.])
-print(c)
-c.long()
-print(c)
-c = c.long()
-print(c)
+#Vectorized!!!
+a0 = torch.arange(3).float().reshape(3,1)
+a1 = torch.arange(3).float().reshape(1,3) * 0.1
+b = torch.arange(6).reshape(2,3).float()
+x = a0 + a1
+c = [0,2]
+x[c] = b
+for x,y in enumerate(['a','b']):
+	assert type(x) is int
+
+print([list(range(3))])

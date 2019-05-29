@@ -102,75 +102,54 @@ def rsa(s_0, listener_prior=None, depth=1, theta=5.):
 	return s_2
 
 
-def model(utterances_heard=None, use_rsa=True, verbose=True):
+def model(observations=None, use_rsa=True, verbose=True, num_items = 0, vocab_size=0, theta=5.):
 	"""
-	:param utterances_heard: [item][word] histogram
+	:param observations: list of (target, context, word histogram) triples. s_0[context] returns s_0 restricted to present items
 	"""
-	num_items = 3
-	vocab_size = 3
-	item_plate = pyro.plate('item_plate', num_items)
+	#Initialize s_0
 	speaker_concentrations = pyro.param("speaker_concentrations", 0.5 * torch.ones(
-		num_items, vocab_size), constraint=constraints.positive)
-	if verbose:
-		print("model speaker_concentrations:\n{}".format(speaker_concentrations))
-		print("utterances_heard argument: {}".format(utterances_heard))
-	# TODO fix shape.
-	s_0 = torch.empty(num_items, vocab_size)
+			num_items, vocab_size), constraint=constraints.positive)
+	s_0 = torch.empty(num_items, vocab_size) 
+	item_plate = pyro.plate('item_plate', num_items)
 	for item_num in item_plate:
 		s_0[item_num] = pyro.sample('s_0_{}'.format(
 			item_num), dist.Dirichlet(speaker_concentrations[item_num]))
 	if verbose:
 		print("model s_0:\n{}".format(s_0))
-	s_2 = rsa(s_0=s_0) if use_rsa else s_0  # [s][u]
-	# Should use histogram instead of sequence of utterances
-	# TODO adjust to that we can have different number of utterances for each item
-	for target_item in item_plate:
-		# print("!!!!!!!!!!!!!!\n{}\n!!!!!!!!!!!!!!!!".format(type(utterances_heard[target_item].sum())))
-		# print(isinstance(utterances_heard[target_item].sum(),Number))
-		pyro.sample('word_count_{}'.format(target_item), dist.Multinomial(
-			total_count=utterances_heard[target_item].sum().item(), probs=s_2[target_item]),obs=utterances_heard[target_item])
-
-	# utterance_plate = pyro.plate(
-	# 	'utterance_plate', utterances_heard.shape[1], dim=-1)
-	# for target_item in item_plate:
-	# 	with utterance_plate as u_id:
-	# 		pyro.sample('utterances_heard_{}'.format(target_item), dist.Categorical(
-	# 			s_2[target_item]), obs=utterances_heard[target_item])  # [u_id]
-	if verbose:
-		print("model utterances_heard:\n", utterances_heard)
+	#Iterate through observations
+	for obs_id, obs in enumerate(observations):
+		target_item, context, word_counts = obs
+		#Get index of target_item in the context
+		target_item_local = context.index(target_item)
+		s_0_local = s_0[context]
+		s_2 = rsa(s_0=s_0_local) if use_rsa else s_0_local
+		pyro.sample('word_count_{}'.format(obs_id), dist.Multinomial(
+			total_count=word_counts.sum().item(), probs=s_2[target_item_local]),obs=word_counts)
 	return s_0
+	# for target_item in item_plate:
+	# 	# print("!!!!!!!!!!!!!!\n{}\n!!!!!!!!!!!!!!!!".format(type(utterances_heard[target_item].sum())))
+	# 	# print(isinstance(utterances_heard[target_item].sum(),Number))
+	# 	pyro.sample('word_count_{}'.format(target_item), dist.Multinomial(
+	# 		total_count=utterances_heard[target_item].sum().item(), probs=s_2[target_item]),obs=utterances_heard[target_item])
 
 
-def guide(utterances_heard=None, use_rsa=True, verbose=True):
-	num_items = 3
-	vocab_size = 3
-	item_plate = pyro.plate('item_plate', num_items)
+
+def guide(observations=None, use_rsa=True, verbose=True, num_items = 0, vocab_size=0, theta=5.):
+	"""
+	:param observations: list of (target, context, word histogram) triples. s_0[context] returns s_0 restricted to present items
+	"""
+	#Initialize s_0
 	speaker_concentrations = pyro.param("speaker_concentrations", 0.5 * torch.ones(
-		num_items, vocab_size), constraint=constraints.positive)
-	if verbose:
-		print("guide speaker_concentrations:\n{}".format(speaker_concentrations))
-		print("utterances_heard argument: {}".format(utterances_heard))
-
-	base_speaker_prior = dist.Dirichlet(speaker_concentrations)
-	s_0 = torch.empty(num_items, vocab_size)
+			num_items, vocab_size), constraint=constraints.positive)
+	s_0 = torch.empty(num_items, vocab_size) 
+	item_plate = pyro.plate('item_plate', num_items)
 	for item_num in item_plate:
 		s_0[item_num] = pyro.sample('s_0_{}'.format(
 			item_num), dist.Dirichlet(speaker_concentrations[item_num]))
-	# I probably need to convert these to sequential plates since they couple downstream
-
 	if verbose:
 		print("guide s_0:\n{}".format(s_0))
-	# s_2 = rsa(s_0=s_0) if use_rsa else s_0  # [s][u]
-	# Should use histogram instead of sequence of utterances
-	# utterance_plate = pyro.plate(
-	# 	'utterance_plate', utterances_heard.shape[1], dim=-1)
-	# with utterance_plate as u_id:
-	# 	utterances_heard = pyro.sample('utterances_heard', dist.Categorical(
-	# 		s_2[target_item]), obs=utterances_heard)  # [u_id]
-	# if verbose: print("guide utterances_heard:\n", utterances_heard)
+
 	return s_0
-
-
 def bayes_rule_test():  # pass
 	# q = torch.tensor([[1.,1.],[1.,1.]])
 	# w = torch.tensor([[2.,3.], [2.,2.]])
@@ -215,44 +194,62 @@ def l1_distance(a, b):
 	return torch.abs(a - b).sum()
 
 
-def generate_data(s_0_true=None, num_utterances_per_item=1000, theta=5.):
+def generate_observations(s_0_true=None, num_utterances_per_item=1000, theta=5., context_list = None):
 	if s_0_true is None:
 		s_0_true = normalize(torch.tensor(
 			[[1, 0, 0], [1, 1, 0], [1, 1, 1]], dtype=torch.float))
 	num_items = s_0_true.shape[0]
-	s_2_true = rsa(s_0_true, theta=theta)
-	utterances_by_item = torch.empty(size=(num_items, num_utterances_per_item))
-	for target_item in range(num_items):
-		for utt in range(num_utterances_per_item):
-			utterances_by_item[target_item][utt] = dist.Categorical(
-				s_2_true[target_item]).sample()
-	return utterances_by_item.long()
+	if context_list is None:
+		context_list = [list(range(num_items))]
+	observations = []
+	for c in context_list:
+		s_0_local = s_0_true[c]
+		s_2_true = rsa(s_0_local, theta=theta)
+		for target_item_local, target_item in enumerate(c):
+			word_count = torch.zeros(len(c))
+			word_dist = dist.Categorical(s_2_true[target_item_local])
+			for utt in range(num_utterances_per_item):
+				word = word_dist.sample()
+				word_count[word] += 1
+			observations.append((target_item,c,word_count))
+	return observations
+
+	# 	utterances_by_item = torch.empty(size=(num_items, num_utterances_per_item))
+	# 	for target_item in range(num_items):
+	# 		for utt in range(num_utterances_per_item):
+	# 			utterances_by_item[target_item][utt] = dist.Categorical(
+	# 				s_2_true[target_item]).sample()
+	# return utterances_by_item.long()
 
 
 def main():
 	use_rsa = False
+	theta=10.
 	# generate test data
 	# utterances_by_item = torch.tensor([[0] * n, [1] * n, [2] * n])
 	num_items = 3
+	vocab_size=3
 	s_0_true = normalize(torch.tensor(
 		[[1, 0, 0], [1, 1, 0], [1, 1, 1]], dtype=torch.float))
-	utterances_by_item = generate_data(s_0_true=s_0_true)
-	max_utterance_id = utterances_by_item.max()
-	print(max_utterance_id)
-	utterance_counts = torch.empty(size=(3, 2 + 1))
-	for item in range(num_items):
-		utterance_counts[item] = utterances_by_item[item].bincount()
-	utterance_probs_empirical = normalize(utterance_counts)
-	# TODO make sure no element of utterance_probs_empirical is 0, otherwise we cannot use it as concentration parameter.
-	print("utterance_probs_empirical:\n{}".format(utterance_probs_empirical))
-	pyro.clear_param_store()
-	# Initialize speaker concentrations based on empirical distribution of utterances.
-	pyro.param("speaker_concentrations", utterance_probs_empirical,
-			   constraint=constraints.positive)
-	# guide = AutoDiagonalNormal(model)
+	# utterances_by_item = generate_data(s_0_true=s_0_true)
 
-	# elbo = TraceEnum_ELBO(max_plate_nesting=3)
-	# elbo.loss(model, guide);
+	# max_utterance_id = utterances_by_item.max()
+	# print(max_utterance_id)
+	# utterance_counts = torch.empty(size=(3, 2 + 1))
+	# for item in range(num_items):
+	# 	utterance_counts[item] = utterances_by_item[item].bincount()
+	# utterance_probs_empirical = normalize(utterance_counts)
+	# # TODO make sure no element of utterance_probs_empirical is 0, otherwise we cannot use it as concentration parameter.
+	# print("utterance_probs_empirical:\n{}".format(utterance_probs_empirical))
+
+	context_list = [[0,1,2]]
+	observations = generate_observations(s_0_true=s_0_true, context_list=context_list,theta=theta)
+
+
+	pyro.clear_param_store()
+	# Initialize speaker concentrations based on empirical distribution of utterances. (Need to rewrite to deal with the multi-context setting)
+	# pyro.param("speaker_concentrations", utterance_probs_empirical,
+	# 		   constraint=constraints.positive)
 	adam_params = {"lr": 0.005, "betas": (0.95, 0.999)}
 	optimizer = Adam(adam_params)
 	svi = SVI(model, guide, optimizer, loss=Trace_ELBO())
@@ -260,18 +257,16 @@ def main():
 	# do gradient steps
 	start_time = time.time()
 	for step in range(n_steps):
-		# target_item = target_items[step % len(target_items)]
-		# assert utterances_by_item[target_item][0] == target_item, "{} {}".format(target_item, utterances_by_item[target_item][0])
 		verbose = True and ((not step % 100) or (step == n_steps - 1))
 		if step == n_steps - 1:
 			print("~~~~~~~~~~~~~")
 		if verbose:
 			print('step: {}'.format(step))
 		# It is not always using the data as observation. Why?
-		svi.step(utterances_heard=utterance_counts,
-				 verbose=verbose, use_rsa=use_rsa)
+		svi.step(observations = observations,
+				 verbose=verbose, use_rsa=use_rsa, num_items=num_items, vocab_size=vocab_size, theta=theta)
 	end_time = time.time()
-	s_2 = guide(use_rsa=use_rsa, utterances_heard=utterances_by_item)
+	# s_2 = guide(use_rsa=use_rsa, utterances_heard=utterances_by_item)
 	print("total time: {}".format(end_time - start_time))
 
 	# print("final s_2:\n{}".format(s_2))
