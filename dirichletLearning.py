@@ -194,7 +194,7 @@ def l1_distance(a, b):
 	return torch.abs(a - b).sum()
 
 
-def generate_observations(s_0_true=None, num_utterances_per_item=1000, theta=5., context_list = None):
+def generate_observations(s_0_true=None, num_utterances_per_item=1000, theta=5., context_list = None, skipped_items = ()):
 	if s_0_true is None:
 		s_0_true = normalize(torch.tensor(
 			[[1, 0, 0], [1, 1, 0], [1, 1, 1]], dtype=torch.float))
@@ -206,12 +206,13 @@ def generate_observations(s_0_true=None, num_utterances_per_item=1000, theta=5.,
 		s_0_local = s_0_true[c]
 		s_2_true = rsa(s_0_local, theta=theta)
 		for target_item_local, target_item in enumerate(c):
-			word_count = torch.zeros(len(c))
-			word_dist = dist.Categorical(s_2_true[target_item_local])
-			for utt in range(num_utterances_per_item):
-				word = word_dist.sample()
-				word_count[word] += 1
-			observations.append((target_item,c,word_count))
+			if target_item not in skipped_items:
+				word_count = torch.zeros(len(c))
+				word_dist = dist.Categorical(s_2_true[target_item_local])
+				for utt in range(num_utterances_per_item):
+					word = word_dist.sample()
+					word_count[word] += 1
+				observations.append((target_item,c,word_count))
 	return observations
 
 	# 	utterances_by_item = torch.empty(size=(num_items, num_utterances_per_item))
@@ -243,7 +244,7 @@ def main():
 	# print("utterance_probs_empirical:\n{}".format(utterance_probs_empirical))
 
 	context_list = [[0,1,2]]
-	observations = generate_observations(s_0_true=s_0_true, context_list=context_list,theta=theta)
+	observations = generate_observations(s_0_true=s_0_true, context_list=context_list,theta=theta, skipped_items = (1,), num_utterances_per_item=1)
 
 
 	pyro.clear_param_store()
@@ -263,8 +264,10 @@ def main():
 		if verbose:
 			print('step: {}'.format(step))
 		# It is not always using the data as observation. Why?
-		svi.step(observations = observations,
+		loss = svi.step(observations = observations,
 				 verbose=verbose, use_rsa=use_rsa, num_items=num_items, vocab_size=vocab_size, theta=theta)
+		if verbose:
+			print("loss: {}".format(loss))
 	end_time = time.time()
 	# s_2 = guide(use_rsa=use_rsa, utterances_heard=utterances_by_item)
 	print("total time: {}".format(end_time - start_time))

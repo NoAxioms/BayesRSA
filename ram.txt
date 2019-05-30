@@ -1,12 +1,16 @@
 ~~~~~~~~TODO~~~~~~~~
 ~~Short Term:~~
-Incorporate multiple contexts. This is where the rsa nature should shine.
-	How to format data? We can do (target, context, histogram) triples. We maintain s_0 for all objects, then restrict to the context by using a view.
-	We can either initialize s_0 at the beginning, or once for each observation. The former.
+Find low-sample examples where this learns faster than a baseline.
+	What baseline? Uniform over all words ever heard for object? Literal listener model?
+Compare to "Acquisition of Word-Object Associations from Human-Robot and Human-Human Dialogues"
+
 
 ~~Medium Term~~
 Allow flexible vocabulary size. Transform datastructure when new words/objects are introduced.
 Play around with initialization schemes - ex. use histogram to initialize dirichlet prior concentrations.
+Can we learn s2 dirichlet explicitly, then use this to infer s0 dirichlet?
+
+
 ~~Longer Term~~
 Network with existing language/vision tools so that this acts as a complement.
 
@@ -23,3 +27,9 @@ We could blend together low, mid, and high sample complexity methods. At very lo
 Should act based on most probable s_0 based on dirichlet concentration.
 
 DO I want to add the option to restric tthe support of the word distributions? This could speed up learning with large item/word sets if used intelligently. Ignore for now.
+
+
+We can maintain a list of used words for each item, and a belief that each other word applies to the item. In other words, ground truth when we know it, belief when we don't.
+
+Q: Does a dirichlet belief support the kind of inference we want? It would likely not if it treats all attributes independently.
+	Testing face, moustache, glasses with moustache item never targeted. Did not make useful inference for moustache item. 
