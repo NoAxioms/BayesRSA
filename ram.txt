@@ -3,7 +3,10 @@
 Find low-sample examples where this learns faster than a baseline.
 	What baseline? Uniform over all words ever heard for object? Literal listener model?
 Compare to "Acquisition of Word-Object Associations from Human-Robot and Human-Human Dialogues"
-
+Implement attribute_set model: maintain a list of words that are known to apply/not apply to each item, and a belief over the rest.
+	Implementation Options:
+		List of known indices for each item
+		Full sized array for known/believed vocabs. Use indexing to take only the relevant bits. ALT: List of arrays for each. Smaller memory footprint, might be easier to freeze irelevant parameters. Freezing known parameters seems pretty important. Is there a performance difference between having n x m scalar paramters vs. a single n x m array parameter? Can I freeze an element of a parameter? It does not seem that you can freeze a parameter. I will have to remove unneeded parameters.
 
 ~~Medium Term~~
 Allow flexible vocabulary size. Transform datastructure when new words/objects are introduced.

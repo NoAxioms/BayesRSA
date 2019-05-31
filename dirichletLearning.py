@@ -102,18 +102,33 @@ def rsa(s_0, listener_prior=None, depth=1, theta=5.):
 	return s_2
 
 
-def model(observations=None, use_rsa=True, verbose=True, num_items = 0, vocab_size=0, theta=5.):
+def model(observations=None, use_rsa=True, verbose=True, num_items = 0, vocab_size=0, theta=5., speaker_prior='dirichlet'):
 	"""
 	:param observations: list of (target, context, word histogram) triples. s_0[context] returns s_0 restricted to present items
 	"""
-	#Initialize s_0
-	speaker_concentrations = pyro.param("speaker_concentrations", 0.5 * torch.ones(
-			num_items, vocab_size), constraint=constraints.positive)
-	s_0 = torch.empty(num_items, vocab_size) 
 	item_plate = pyro.plate('item_plate', num_items)
-	for item_num in item_plate:
-		s_0[item_num] = pyro.sample('s_0_{}'.format(
-			item_num), dist.Dirichlet(speaker_concentrations[item_num]))
+	#Initialize s_0
+	if speaker_prior == "dirichlet":
+		speaker_concentrations = pyro.param("speaker_concentrations", 0.5 * torch.ones(
+				num_items, vocab_size), constraint=constraints.positive)
+		s_0 = torch.empty(num_items, vocab_size) 
+		
+		for item_num in item_plate:
+			s_0[item_num] = pyro.sample('s_0_{}'.format(
+				item_num), dist.Dirichlet(speaker_concentrations[item_num]))
+	elif speaker_prior == "attribute_set":
+		word_plate = pyro.plate('word_plate', vocab_size)
+		#[item][word] == 1 if word is known to apply to item, else 0
+		known_words = pyro.param("known_words", torch.zeros(num_items, vocab_size))  #Get rid of gradient here
+		#[item][word] == probability word is known to apply to item
+		vocab_beliefs = pyro.param('vocab_beliefs', torch.ones(num_items, vocab_size) * 0.5)
+		item_vocabs = known_words.clone().detach().requires_grad(True)
+		for item_num in item_plate:
+			for word_num in word_plate:
+				if known_words[item_num][word_num] == 0:
+					item_vocabs[item_num][word_num] = pyro.sample("item_vocab_{}_{}".format(item_num,word_num), dist.Bernoulli(vocab_beliefs[item_num][word_num]))
+		
+
 	if verbose:
 		print("model s_0:\n{}".format(s_0))
 	#Iterate through observations

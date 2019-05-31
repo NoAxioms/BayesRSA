@@ -17,14 +17,45 @@ pyro.enable_validation()
 pyro.set_rng_seed(0)
 # torch.set_printoptions(precision=3, sci_mode=False)  #Need to update pytorch to toggle sci_mode
 
-#Vectorized!!!
-a0 = torch.arange(3).float().reshape(3,1)
-a1 = torch.arange(3).float().reshape(1,3) * 0.1
-b = torch.arange(6).reshape(2,3).float()
-x = a0 + a1
-c = [0,2]
-x[c] = b
-for x,y in enumerate(['a','b']):
-	assert type(x) is int
+def outer_sum_example():
+	#Vectorized!!!
+	a0 = torch.arange(3).float().reshape(3,1)
+	a1 = torch.arange(3).float().reshape(1,3) * 0.1
+	x = a0 + a1
+	return x
+def subarray_replacement_example():
+	x = outer_sum_example()
+	b = torch.arange(6).reshape(2,3).float()
+	c = [0,2]
+	print(x)
+	x[c] = b
+	print(x)
+	x = outer_sum_example()
+	c = [[0,0],[1,2]]
+	print(x[c])
+	# print(x)
+def enumerate_example():
+	for x,y in enumerate(['a','b']):
+		assert type(x) is int
+def known_and_believed_example():
+	num_items = 2
+	num_words = 3
+	known_words = torch.zeros((num_items,num_words))
+	word_beliefs = torch.ones((num_items,num_words)) * 0.5
+	known_words_ids = [[] for i in range(num_items)]
+	known_words_ids[0].append(1)
+	known_words_ids[0].append(0)
 
-print([list(range(3))])
+	word_beliefs_adjusted = word_beliefs.clone().detach()
+	for item_num in range(num_items):
+		word_beliefs_adjusted[item_num][known_words_ids[item_num]] = known_words[item_num][known_words_ids[item_num]]
+	print(word_beliefs_adjusted)
+
+# a = torch.zeros(5)
+# a[0:2] = 1
+# print(a)
+
+a = [['a0','a1'], ['b0', 'b1']]
+b = zip(*a)
+for i in b:
+	print(i)
