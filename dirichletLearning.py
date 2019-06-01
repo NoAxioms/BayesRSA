@@ -119,14 +119,17 @@ def model(observations=None, use_rsa=True, verbose=True, num_items = 0, vocab_si
 	elif speaker_prior == "attribute_set":
 		word_plate = pyro.plate('word_plate', vocab_size)
 		#[item][word] == 1 if word is known to apply to item, else 0
-		known_words = pyro.param("known_words", torch.zeros(num_items, vocab_size))  #Get rid of gradient here
+		vocab_known = pyro.param("vocab_known", torch.zeros(num_items, vocab_size))  #Get rid of gradient here
 		#[item][word] == probability word is known to apply to item
-		vocab_beliefs = pyro.param('vocab_beliefs', torch.ones(num_items, vocab_size) * 0.5)
-		item_vocabs = known_words.clone().detach().requires_grad(True)
+		vocab_believed = pyro.param('vocab_believed', torch.ones(num_items, vocab_size) * 0.5)
+		vocab_
+		# item_vocabs = vocab_known.clone().detach().requires_grad(True)
 		for item_num in item_plate:
-			for word_num in word_plate:
-				if known_words[item_num][word_num] == 0:
-					item_vocabs[item_num][word_num] = pyro.sample("item_vocab_{}_{}".format(item_num,word_num), dist.Bernoulli(vocab_beliefs[item_num][word_num]))
+			word_beliefs_adjusted[item_num][vocab_known_ids[item_num]] = vocab_known[item_num][vocab_known_ids[item_num]]
+		# for item_num in item_plate:
+		# 	for word_num in word_plate:
+		# 		if vocab_known[item_num][word_num] == 0:
+		# 			item_vocabs[item_num][word_num] = pyro.sample("item_vocab_{}_{}".format(item_num,word_num), dist.Bernoulli(vocab_believed[item_num][word_num]))
 		
 
 	if verbose:

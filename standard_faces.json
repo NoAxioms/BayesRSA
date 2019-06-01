@@ -1,6 +1,0 @@
-{
-	"faces_classic":["face","face moustache","face moustache glasses"],
-	"faces_sym": ["face glasses", "face glasses moustache", "face moustache"],
-	"faces_sequence4":["face","face moustache","face moustache glasses", "face moustache glasses hat"],
-	"faces_sequence_alph":["a","a b", "a b c", "a b c d"]
-}
