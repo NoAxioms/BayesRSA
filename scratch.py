@@ -2,6 +2,7 @@ import os
 import torch
 import pyro
 import pyro.distributions as dist
+from pyro.params.param_store import ParamStoreDict
 from torch.distributions import constraints
 from pyro import poutine
 from pyro.infer import SVI, Trace_ELBO, TraceEnum_ELBO, config_enumerate, infer_discrete
@@ -54,8 +55,13 @@ def known_and_believed_example():
 # a = torch.zeros(5)
 # a[0:2] = 1
 # print(a)
+def unzip_example():
+	a = [['a0','a1'], ['b0', 'b1']]
+	b = zip(*a)
+	for i in b:
+		print(i)
 
-a = [['a0','a1'], ['b0', 'b1']]
-b = zip(*a)
-for i in b:
-	print(i)
+pyro.clear_param_store()
+pyro.param("cake", torch.ones(3))
+ps = pyro.get_param_store()
+print(ps.items())

@@ -3,7 +3,6 @@ from collections import namedtuple
 import torch
 import pyro
 import pyro.distributions as dist
-from pyro import ParamStore
 from torch.distributions import constraints
 from pyro import poutine
 from pyro.infer import SVI, Trace_ELBO, TraceEnum_ELBO, config_enumerate, infer_discrete
@@ -35,17 +34,26 @@ def copy_array_sans_indices_test():
 	print(old_array)
 	print(new_array)
 
+def print_param_items(param_store):
+	print("\nParam items:")
+	for i in param_store.items():
+		print(i)
 def model(num_items, num_words, known_words_by_item, known_values_by_item):
+	print("known words and values:\n{}\n{}".format(known_words_by_item,known_values_by_item))
 	item_plate = pyro.plate('item_plate', num_items)
 	s_0 = torch.empty((num_items,num_words))
 	for i in item_plate:
-		s_0[i][known_words_by_item[i]] = torch.tensor(known_values_by_item[i])
+		print("s_0[{}]".format(i))
+		s_0[i][known_words_by_item[i]] = torch.tensor(known_values_by_item[i], dtype=torch.float)
+		print(s_0[i])
 		unkown_words = [w for w in range(num_words) if w not in known_words_by_item[i]]
 		s_0[i][unkown_words] = pyro.param('vocab_believed_{}'.format(i), torch.ones(len(unkown_words)) * 0.5)
-	print(s_0)
+		print(s_0[i])
 
 def main():
 	pyro.clear_param_store()
+	param_store = pyro.get_param_store()
+	print_param_items(param_store)
 	num_items = 2
 	num_words = 3
 	#This kind of parallel structure feels unstable
@@ -58,17 +66,19 @@ def main():
 	optimizer = Adam(adam_params)
 	svi = SVI(model, model, optimizer, loss=Trace_ELBO())
 	svi.step(num_items=num_items, num_words=num_words, known_words_by_item=known_words_by_item, known_values_by_item=known_values_by_item)
+	print_param_items(param_store)
+	
 	revelations = [Revelation(0,[0,1],[1,0])] #word 0 applied to item 0, word 1 does not
 	#This is ugly. Would be pretty if each revelation were an item, word, value triple, 
 	#but since the param we are updating is an array, I preferred this.
 	for r in revelations:
-		#Update knowledge
+		#Separate r.words into words we already have knowledge over and those which are new
 		redundant_words = []
 		new_words_global = []
 		for w_id_in_revelation, w in enumerate(r.words):
 			if w not in known_words_by_item[r.item]:
 				new_words_global.append(w)
-			#If we know the value of the word
+			#If we already know the value of the word, we were wrong. Update it.
 			else:
 				w_index_in_known = known_words_by_item[r.item].index(w)
 				current_val = known_values_by_item[r.item][w_index_in_known]
@@ -80,7 +90,10 @@ def main():
 		vocab_believed = pyro.param('vocab_believed_{}'.format(r.item), torch.ones(num_words) * 0.5)
 		new_words_local = [global_2_local_id(w, known_words_by_item[r.item]) for w in new_words_global]
 		vocab_believed_new = copy_array_sans_indices(vocab_believed,new_words_local)
-		ParamStore.replace_param('vocab_believed_{}'.format(r.item),vocab_believed,vocab_believed_new)
+		param_store.replace_param(param_name='vocab_believed_{}'.format(r.item),new_param=vocab_believed_new,old_param=vocab_believed)
+		known_words_by_item[r.item].extend(new_words_global)
+		known_values_by_item[r.item].extend(r.values)
+	print_param_items(param_store)
 
 	svi.step(num_items=num_items, num_words=num_words, known_words_by_item=known_words_by_item, known_values_by_item=known_values_by_item)
 
