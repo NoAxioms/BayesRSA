@@ -1,5 +1,11 @@
 ~~~~~~~~TODO~~~~~~~~
 ~~Short Term:~~
+Implement Fetch version:
+	Inter trial inference is same as before with attribute-set model
+	How to do intra-trial inference?
+		For small data size, it may be worth it to maintain full trajectories in history - speech, gesture (uncompressed), desired item.
+			Should a trajectory track the agent's belief in the desired object over time? This makes sense if the human can infer this belief and acts accordingly. However, our model assumes the human assumes the agent knows the lexicon; thus the human's estimation of the agent's belief will be incorrect. For now, assume the human treats the agent as having a uniform belief at all times.
+
 Find low-sample examples where this learns faster than a baseline.
 	What baseline? Uniform over all words ever heard for object? Literal listener model?
 Compare to "Acquisition of Word-Object Associations from Human-Robot and Human-Human Dialogues"
@@ -34,3 +40,8 @@ We can maintain a list of used words for each item, and a belief that each other
 
 Q: Does a dirichlet belief support the kind of inference we want? It would likely not if it treats all attributes independently.
 	Testing face, moustache, glasses with moustache item never targeted. Did not make useful inference for moustache item. 
+
+
+Learning and using language via recursive pragmatic reasoning about other agents has probability of object given word, and maintains dirichlet prior over this.
+
+We use pyro.set_rng(0) and do no other sampling (in att_set_test), yet the results are random?

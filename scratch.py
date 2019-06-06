@@ -1,4 +1,4 @@
-import os
+import os, time
 import torch
 import pyro
 import pyro.distributions as dist
@@ -61,7 +61,22 @@ def unzip_example():
 	for i in b:
 		print(i)
 
-pyro.clear_param_store()
-pyro.param("cake", torch.ones(3))
-ps = pyro.get_param_store()
-print(ps.items())
+# pyro.clear_param_store()
+# pyro.param("cake", torch.ones(3))
+# ps = pyro.get_param_store()
+# print(ps.items())
+# a = torch.zeros(4,4)
+# b = torch.ones(2,3)
+# a[b.shape] = b
+# print(a)
+
+# class foo():
+# 	cat = []
+# 	def bar():
+# 		foo.cat.append("meow")
+
+# foo.bar()
+# print(foo.cat)
+a = pyro.param('a', torch.zeros(3), constraint=constraints.positive)
+param_store = pyro.get_param_store()
+param_store.__delitem__('a')
