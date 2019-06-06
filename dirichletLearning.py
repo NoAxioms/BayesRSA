@@ -16,12 +16,7 @@ from pyro import poutine
 from pyro.infer import SVI, Trace_ELBO, TraceEnum_ELBO, config_enumerate, infer_discrete
 from pyro.contrib.autoguide import AutoDiagonalNormal
 from pyro.optim import Adam
-
-
-# from rsaClass import RSA
-# from utilities import softmax
 smoke_test = ('CI' in os.environ)
-# assert pyro.__version__.startswith('0.3.1')
 pyro.enable_validation()
 pyro.set_rng_seed(0)
 #TODO change RSA to use whole utterance. 
@@ -79,11 +74,6 @@ def softmax(x, theta=1.0):
 	# 2d only
 	exponentiated = torch.exp(theta * x)
 	return normalize(exponentiated)
-	# print("exp:\n{}".format(exponentiated))
-	# denominators = exponentiated.sum(dim=0)
-	# print("den:\n{}".format(denominators))
-	# return (exponentiated.transpose(0,1) / denominators).transpose(0,1)
-
 
 def bayes_rule(b, a_cond_b, a=None, debug=False):
 	"""
@@ -118,9 +108,7 @@ def bayes_rule(b, a_cond_b, a=None, debug=False):
 	if debug:
 		print("b_cond_a:\n", b_cond_a)
 		print("nan_id:\n", nan_id)
-
 	return b_cond_a
-
 
 def rsa(s_0, listener_prior=None, depth=1, theta=5.):
 	"""
@@ -138,7 +126,6 @@ def rsa(s_0, listener_prior=None, depth=1, theta=5.):
 		# Update speaker based on listener
 		s_2 = softmax(l_1, theta=theta)  # [s][u]  #Should actually softmax logprob
 	return s_2
-
 
 def model(observations=None, use_rsa=True, verbose=True, num_items = 0, vocab_size=0, theta=5.):
 	"""
@@ -167,11 +154,6 @@ def model(observations=None, use_rsa=True, verbose=True, num_items = 0, vocab_si
 		pyro.sample('word_count_{}'.format(obs_id), dist.Multinomial(
 			total_count=word_counts.sum().item(), probs=s_2[target_item_local]),obs=word_counts)
 	return s_0
-	# for target_item in item_plate:
-	# 	# print("!!!!!!!!!!!!!!\n{}\n!!!!!!!!!!!!!!!!".format(type(utterances_heard[target_item].sum())))
-	# 	# print(isinstance(utterances_heard[target_item].sum(),Number))
-	# 	pyro.sample('word_count_{}'.format(target_item), dist.Multinomial(
-	# 		total_count=utterances_heard[target_item].sum().item(), probs=s_2[target_item]),obs=utterances_heard[target_item])
 
 def model_2(contexts, num_items, use_rsa=True, theta = 5.):
 	# print("known words and values:\n{}\n{}".format(known_words_by_item,known_values_by_item))
@@ -226,9 +208,6 @@ def guide(observations=None, use_rsa=True, verbose=True, num_items = 0, vocab_si
 
 	return s_0
 def bayes_rule_test():  # pass
-	# q = torch.tensor([[1.,1.],[1.,1.]])
-	# w = torch.tensor([[2.,3.], [2.,2.]])
-	# print(q/w)
 	b = torch.tensor([.5, .5])
 	a_cond_b = torch.tensor([[1., 0.], [.5, .5]])
 	b_cond_a = bayes_rule(b, a_cond_b)
@@ -244,10 +223,8 @@ def rsa_test():  # TODO deal with nans when a word is never used
 	s_0 = torch.tensor([[1, 0, 0], [1, 1, 0]], dtype=torch.float32)
 	# l_prior = torch.tensor([1/3,2/3])
 	print("s_0:\n", s_0)
-
 	s_1 = rsa(s_0, theta=10)
 	print("s_1:\n", s_1)
-
 	a = torch.tensor([[0., 2., 5.], [0., 3., 3.]])
 	a1 = normalize(a)
 	assert torch.abs(torch.ones(a.shape[0]) - a1.sum(dim=1)).sum() < 0.001
@@ -290,13 +267,6 @@ def generate_observations(s_0_true=None, num_utterances_per_item=1000, theta=5.,
 				observations.append((target_item,c,word_count))
 	return observations
 
-	# 	utterances_by_item = torch.empty(size=(num_items, num_utterances_per_item))
-	# 	for target_item in range(num_items):
-	# 		for utt in range(num_utterances_per_item):
-	# 			utterances_by_item[target_item][utt] = dist.Categorical(
-	# 				s_2_true[target_item]).sample()
-	# return utterances_by_item.long()
-
 
 def og_example():
 	use_rsa = False
@@ -333,8 +303,6 @@ def og_example():
 	end_time = time.time()
 	# s_2 = guide(use_rsa=use_rsa, utterances_heard=utterances_by_item)
 	print("total time: {}".format(end_time - start_time))
-
-	# print("final s_2:\n{}".format(s_2))
 
 
 def update_knowledge(item, words, values):
@@ -386,12 +354,12 @@ def att_set_test():
 	num_items = 3
 	initialize_knowledge(num_items)
 	# num_words = 0
-	all_words = [0,1,2]
+	all_words = [0,1,2,3]
 	Context.all_words = all_words
 	context = Context(items=(0,1,2))
 	context_list = [context]
 	pyro.clear_param_store()
-	adam_params = {"lr": 0.005, "betas": (0.95, 0.999)}
+	adam_params = {"lr": 0.05, "betas": (0.95, 0.999)}
 	optimizer = Adam(adam_params)
 	svi = SVI(model_2, guide_2, optimizer, loss=Trace_ELBO())
 	revelations = []
