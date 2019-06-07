@@ -7,11 +7,14 @@ Look up contextual deixis. We need to decide how to model gesture. In fetch, peo
 		rational gesture
 		discriminative deictic gesture
 		discriminative gesture generation
+	Use Henny's gesture model?
 
 6/8/2019 (Future)
 Find out how to interface pyro, which requires python 3, with ros, which uses python 2.
 
-
+~~Psuedo code~~
+During trial:
+	sample desired item. run model on it. 
 
 ~~~~~~~~TODO~~~~~~~~
 ~~Short Term:~~
