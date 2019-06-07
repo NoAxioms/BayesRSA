@@ -13,7 +13,7 @@ from pyro.optim import Adam
 # from rsaClass import RSA
 # from utilities import softmax
 smoke_test = ('CI' in os.environ)
-assert pyro.__version__.startswith('0.3.1')
+# assert pyro.__version__.startswith('0.3.1')
 pyro.enable_validation()
 pyro.set_rng_seed(0)
 # torch.set_printoptions(precision=3, sci_mode=False)  #Need to update pytorch to toggle sci_mode
@@ -76,7 +76,14 @@ def unzip_example():
 # 		foo.cat.append("meow")
 
 # foo.bar()
-# print(foo.cat)
-a = pyro.param('a', torch.zeros(3), constraint=constraints.positive)
-param_store = pyro.get_param_store()
-param_store.__delitem__('a')
+# # print(foo.cat)
+# a = pyro.param('a', torch.zeros(3), constraint=constraints.positive)
+# param_store = pyro.get_param_store()
+# param_store.__delitem__('a')
+
+cov = torch.eye(3)
+cov[2][2] = .0001
+target = torch.tensor([1.,1,1])
+for i in range(10):
+	a = dist.MultivariateNormal(loc=target, covariance_matrix = cov).sample()
+	print(a)

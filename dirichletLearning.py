@@ -102,6 +102,17 @@ def guide_2(contexts, num_items, use_rsa=True, theta= 5.):
 		# print(s_0[i])
 	return s_0
 
+# def trial_model(item_prior):
+# 	desired_item = pyro.sample('desired_item', item_prior)
+
+def sample_gesture(ideal_vector, noise):
+	"""
+	:param target: target_location - human_location
+	"""
+	distance = torch.norm(ideal_vector,2)
+	gesture = pyro.sample('gesture', dist.MultivariateNormal(loc=ideal_vector, covariance_matrix = torch.eye(3) * noise * distance))
+	return gesture
+
 def generate_observations(s_0_true=None, num_utterances_per_item=1000, theta=5., context_list = None, skipped_items = ()):
 	if s_0_true is None:
 		s_0_true = normalize(torch.tensor(
