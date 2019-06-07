@@ -1,23 +1,31 @@
+6/7/2019:
+Look up contextual deixis. We need to decide how to model gesture. In fetch, people seemed to point naively.
+	We could look through fetch data and create model.
+	google scholar queries (no relevant results in top 5):
+		contextual deixis
+		contextual deixis gesture
+		rational gesture
+		discriminative deictic gesture
+		discriminative gesture generation
+
+6/8/2019 (Future)
+Find out how to interface pyro, which requires python 3, with ros, which uses python 2.
+
+
+
 ~~~~~~~~TODO~~~~~~~~
 ~~Short Term:~~
 Implement Fetch version:
-	Inter trial inference is same as before with attribute-set model
 	How to do intra-trial inference?
 		For small data size, it may be worth it to maintain full trajectories in history - speech, gesture (uncompressed), desired item.
 			Should a trajectory track the agent's belief in the desired object over time? This makes sense if the human can infer this belief and acts accordingly. However, our model assumes the human assumes the agent knows the lexicon; thus the human's estimation of the agent's belief will be incorrect. For now, assume the human treats the agent as having a uniform belief at all times.
-	How to deal with gesture?
 	Add multi-word utterances (will probably need to use cost)
-Find low-sample examples where this learns faster than a baseline.
-	What baseline? Uniform over all words ever heard for object? Literal listener model?
 Compare to "Acquisition of Word-Object Associations from Human-Robot and Human-Human Dialogues"
 Implement attribute_set model: maintain a list of words that are known to apply/not apply to each item, and a belief over the rest. 
 	Should this be in the same file as the old version? 
 
 ~~Medium Term~~
 Allow flexible vocabulary size. Transform datastructure when new words/objects are introduced.
-Play around with initialization schemes - ex. use histogram to initialize dirichlet prior concentrations.
-Can we learn s2 dirichlet explicitly, then use this to infer s0 dirichlet?
-
 
 ~~Longer Term~~
 Network with existing language/vision tools so that this acts as a complement.
@@ -36,13 +44,8 @@ Should act based on most probable s_0 based on dirichlet concentration.
 
 DO I want to add the option to restric tthe support of the word distributions? This could speed up learning with large item/word sets if used intelligently. Ignore for now.
 
-
-We can maintain a list of used words for each item, and a belief that each other word applies to the item. In other words, ground truth when we know it, belief when we don't.
-
 Q: Does a dirichlet belief support the kind of inference we want? It would likely not if it treats all attributes independently.
 	Testing face, moustache, glasses with moustache item never targeted. Did not make useful inference for moustache item. 
-
-
-Learning and using language via recursive pragmatic reasoning about other agents has probability of object given word, and maintains dirichlet prior over this.
+	Learning and using language via recursive pragmatic reasoning about other agents has probability of object given word, and maintains dirichlet prior over this. Starting with base listener feels weird, since we are the listener and we don't know jack.
 
 We use pyro.set_rng(0) and do no other sampling (in att_set_test), yet the results are random?

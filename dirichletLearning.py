@@ -16,19 +16,14 @@ from pyro import poutine
 from pyro.infer import SVI, Trace_ELBO, TraceEnum_ELBO, config_enumerate, infer_discrete
 from pyro.contrib.autoguide import AutoDiagonalNormal
 from pyro.optim import Adam
+from utilities import global_2_local_id, copy_array_sans_indices
 smoke_test = ('CI' in os.environ)
 pyro.enable_validation()
 pyro.set_rng_seed(0)
 #TODO change RSA to use whole utterance. 
 #Will need to use cost term. May need to use sampling to avoid combinatorial explosion.
 Revelation = namedtuple('Revelation', ['item','words', 'values'])
-def global_2_local_id(global_id, ommited_ids):
-	num_ommited_predecessors = len([i for i in ommited_ids if i < global_id])
-	return global_id - num_ommited_predecessors
-def copy_array_sans_indices(old_array, skipped_indices):
-	kept_indices = [i for i in range(old_array.shape[0]) if i not in skipped_indices]
-	new_array = old_array[kept_indices].clone().detach()
-	return new_array
+
 class Context():
 	"""
 	A context is a set of items present, and a count of words attributed to each item
@@ -38,6 +33,8 @@ class Context():
 	"""
 	#Set all_words to the correct list.
 	all_words = []
+	words_by_item = []
+	values_by_item = []
 	def __init__(self, items):
 		self.items = copy.copy(items)
 		self.word_counts = torch.zeros(len(self.items), len(Context.all_words))
@@ -51,9 +48,6 @@ class Context():
 			new_word_counts = torch.zeros(num_items, len(all_words))
 			new_word_counts[:][0:self.word_counts.shape[1]] = self.word_counts
 			self.word_counts = new_word_counts
-class Known():
-	words_by_item = []
-	values_by_item = []
 
 
 def normalize(x):
@@ -136,12 +130,9 @@ def model(observations=None, use_rsa=True, verbose=True, num_items = 0, vocab_si
 	s_0 = torch.empty(num_items, vocab_size) 	
 	speaker_concentrations = pyro.param("speaker_concentrations", 0.5 * torch.ones(
 			num_items, vocab_size), constraint=constraints.positive)
-	
 	for item_num in item_plate:
 		s_0[item_num] = pyro.sample('s_0_{}'.format(
 			item_num), dist.Dirichlet(speaker_concentrations[item_num]))
-
-
 	if verbose:
 		print("model s_0:\n{}".format(s_0))
 	#Iterate through observations
@@ -162,9 +153,9 @@ def model_2(contexts, num_items, use_rsa=True, theta = 5.):
 	s_0 = torch.empty((num_items,num_words))
 	for i in item_plate:
 		# print("s_0[{}]".format(i))
-		s_0[i][Known.words_by_item[i]] = torch.tensor(Known.values_by_item[i], dtype=torch.float)
+		s_0[i][Context.words_by_item[i]] = torch.tensor(Context.values_by_item[i], dtype=torch.float)
 		# print(s_0[i])
-		unkown_words = [w for w in range(num_words) if w not in Known.words_by_item[i]]
+		unkown_words = [w for w in range(num_words) if w not in Context.words_by_item[i]]
 		s_0[i][unkown_words] = pyro.param('vocab_believed_{}'.format(i), torch.ones(len(unkown_words)) * 0.5, constraint=constraints.unit_interval)
 		# print(s_0[i])
 	for c_id, c in enumerate(contexts):
@@ -183,9 +174,9 @@ def guide_2(contexts, num_items, use_rsa=True, theta= 5.):
 	s_0 = torch.empty((num_items,num_words))
 	for i in item_plate:
 		# print("s_0[{}]".format(i))
-		s_0[i][Known.words_by_item[i]] = torch.tensor(Known.values_by_item[i], dtype=torch.float)
+		s_0[i][Context.words_by_item[i]] = torch.tensor(Context.values_by_item[i], dtype=torch.float)
 		# print(s_0[i])
-		unkown_words = [w for w in range(num_words) if w not in Known.words_by_item[i]]
+		unkown_words = [w for w in range(num_words) if w not in Context.words_by_item[i]]
 		s_0[i][unkown_words] = pyro.param('vocab_believed_{}'.format(i), torch.ones(len(unkown_words)) * 0.5,constraint=constraints.unit_interval)
 		# print(s_0[i])
 	return s_0
@@ -306,28 +297,28 @@ def og_example():
 
 
 def update_knowledge(item, words, values):
-	new_words_global = []
-	new_values_global = []
+	new_words_ids = []
+	new_values = []
 	for w_id_in_revelation, w in enumerate(words):
-		if w not in Known.words_by_item[item]:
-			new_words_global.append(w)
-			new_values_global.append(values[w_id_in_revelation])
+		if w not in Context.words_by_item[item]:
+			new_words_ids.append(w)
+			new_values.append(values[w_id_in_revelation])
 		#If we already know the value of the word, we were wrong. Update it.
 		else:
-			w_index_in_known = Known.words_by_item[item].index(w)
-			current_val = Known.values_by_item[item][w_index_in_known]
+			w_index_in_known = Context.words_by_item[item].index(w)
+			current_val = Context.values_by_item[item][w_index_in_known]
 			new_val = values[w_id_in_revelation]
 			if current_val != new_val:
 				print("Certain knowledge was wrong: {}[{}]: {} -> {}".format(item,w,current_val,new_val))
-				Known.values_by_item[item][w_index_in_known] = new_val
-	Known.words_by_item[item].extend(new_words_global)
-	Known.values_by_item[item].extend(new_values_global)
-	return new_words_global  #return this to use in updating belief params
+				Context.values_by_item[item][w_index_in_known] = new_val
+	Context.words_by_item[item].extend(new_words_ids)
+	Context.values_by_item[item].extend(new_values)
+	return new_words_ids  #return this to use in updating belief params
 
 def update_beliefs(item, new_words_global):
 	param_store = pyro.get_param_store()
 	vocab_believed = pyro.param('vocab_believed_{}'.format(item), torch.ones(len(Context.all_words)) * 0.5, constraint=constraints.unit_interval)
-	new_words_local = [global_2_local_id(w, Known.words_by_item[item]) for w in new_words_global]
+	new_words_local = [global_2_local_id(w, Context.words_by_item[item]) for w in new_words_global]
 	vocab_believed_new = copy_array_sans_indices(vocab_believed,new_words_local)
 	# param_store.replace_param(param_name='vocab_believed_{}'.format(item),new_param=vocab_believed_new,old_param=vocab_believed)  #Add positive constraint
 	param_store.__delitem__('vocab_believed_{}'.format(item))
@@ -348,8 +339,8 @@ def update(svi, revelations, time_limit, svi_args):
 		svi.step(**svi_args)
 	# svi_args["verbose"] = True
 def initialize_knowledge(num_items):
-	Known.words_by_item = [[] for _ in range(num_items)]
-	Known.values_by_item = [[] for _ in range(num_items)]
+	Context.words_by_item = [[] for _ in range(num_items)]
+	Context.values_by_item = [[] for _ in range(num_items)]
 def att_set_test():
 	num_items = 3
 	initialize_knowledge(num_items)
