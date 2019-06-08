@@ -29,13 +29,16 @@ def sph2cart(sph):
 	y = rcos_theta * torch.sin(sph[0])
 	z = sph[2] * torch.sin(1)
 	return torch.tensor([x,y,z])
+def trial_model(item_locs, head_loc, obs_gesture, arm_length = 0.5, noise = .1):
+	target_item = pyro.sample('target_item', dist.Categorical(pyro.param('item_probs')))
+	target_loc = item_locs[target_item]
+	gesture = gesture_model(target_loc, head_loc, obs_gesture, arm_length = 0.5, noise = .1)
 
-def gesture_model(item_locs, head_loc, obs_gesture, arm_length = 0.5, noise = .1):
+
+def gesture_model(target_loc, head_loc, obs_gesture, arm_length = 0.5, noise = .1):
 	"""
 	:param target: target_location - human_location
 	"""
-	target_item = pyro.sample('target_item', dist.Categorical(pyro.param('item_probs')))
-	target_loc = item_locs[target_item]
 	ideal_vector = cart2sph(target_loc - head_loc)
 	dist2target = ideal_vector[2]
 	# ideal_vector[2] = arm_length
@@ -47,7 +50,7 @@ def gesture_model(item_locs, head_loc, obs_gesture, arm_length = 0.5, noise = .1
 	gesture = pyro.sample('gesture', dist.MultivariateNormal(loc=ideal_vector, covariance_matrix = torch.eye(3) * noise * distance), obs = obs_gesture)
 	return gesture
 
-def gesture_guide(item_locs, head_loc, obs_gesture, arm_length = 0.5, noise = .1):
+def trial_guide(item_locs, head_loc, obs_gesture, arm_length = 0.5, noise = .1):
 	target_item = pyro.sample('target_item', dist.Categorical(pyro.param('item_probs')))
 
 
@@ -65,7 +68,7 @@ if __name__ == "__main__":
 	item_probs = pyro.param('item_probs', torch.ones(num_items)/num_items, constraint=constraints.simplex)
 	adam_params = {"lr": 0.05, "betas": (0.95, 0.999)}
 	optimizer = Adam(adam_params)
-	svi = SVI(gesture_model, gesture_guide, optimizer, loss=Trace_ELBO())
+	svi = SVI(trial_model, trial_guide, optimizer, loss=Trace_ELBO())
 	gesture = torch.tensor([2.3562, 0.0000, arm_length])
 	for s in range(1000):
 		svi.step(item_locs,head_loc, gesture, arm_length, 0.0001)
