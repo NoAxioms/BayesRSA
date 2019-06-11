@@ -35,7 +35,7 @@ def trial_model(item_locs, head_loc, obs_gesture, arm_length = 0.5, noise = .1):
 	gesture = gesture_model(target_loc, head_loc, obs_gesture, arm_length = 0.5, noise = .1)
 
 
-def gesture_model(target_loc, head_loc, obs_gesture, arm_length = 0.5, noise = .1):
+def gesture_model(target_loc, head_loc, obs_gesture, arm_length = 0.5, noise = .1, gesture_prob = .3):
 	"""
 	:param target: target_location - human_location
 	"""
@@ -47,7 +47,12 @@ def gesture_model(target_loc, head_loc, obs_gesture, arm_length = 0.5, noise = .
 	covariance_matrix *= noise * (dist2target - arm_length)  
 
 	distance = torch.norm(ideal_vector,2)
-	gesture = pyro.sample('gesture', dist.MultivariateNormal(loc=ideal_vector, covariance_matrix = torch.eye(3) * noise * distance), obs = obs_gesture)
+	obs_received_gesture = 0 if obs_gesture is None else 1
+	# received_gesture = pyro.sample('received_gesture', dist.Bernoulli(.3), obs = obs_received_gesture)
+	if obs_received_gesture:
+		gesture = pyro.sample('gesture', dist.MultivariateNormal(loc=ideal_vector, covariance_matrix = torch.eye(3) * noise * distance), obs = obs_gesture)
+	else:
+		gesture = None
 	return gesture
 
 def trial_guide(item_locs, head_loc, obs_gesture, arm_length = 0.5, noise = .1):
@@ -69,7 +74,8 @@ if __name__ == "__main__":
 	adam_params = {"lr": 0.05, "betas": (0.95, 0.999)}
 	optimizer = Adam(adam_params)
 	svi = SVI(trial_model, trial_guide, optimizer, loss=Trace_ELBO())
-	gesture = torch.tensor([2.3562, 0.0000, arm_length])
+	# gesture = torch.tensor([2.3562, 0.0000, arm_length])
+	gesture = None
 	for s in range(1000):
 		svi.step(item_locs,head_loc, gesture, arm_length, 0.0001)
 		if s % 100 == 0:

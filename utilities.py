@@ -67,3 +67,17 @@ def bayes_rule(b, a_cond_b, a=None, debug=False):
 
 def l1_distance(a, b):
 	return torch.abs(a - b).sum()
+
+def cart2sph(cart):
+	r = torch.norm(cart,2)
+	az = torch.atan2(cart[1],cart[0])
+	hxy = torch.norm(cart[0:2],2)
+	el = torch.atan2(cart[2],hxy)
+	return torch.tensor([az,el,r])
+
+def sph2cart(sph):
+	rcos_theta = sph[2] * torch.cos(sph[1])
+	x = rcos_theta * torch.cos(sph[0])
+	y = rcos_theta * torch.sin(sph[0])
+	z = sph[2] * torch.sin(1)
+	return torch.tensor([x,y,z])

@@ -1,24 +1,14 @@
-6/7/2019:
-Look up contextual deixis. We need to decide how to model gesture. In fetch, people seemed to point naively.
-	We could look through fetch data and create model.
-	google scholar queries (no relevant results in top 5):
-		contextual deixis
-		contextual deixis gesture
-		rational gesture
-		discriminative deictic gesture
-		discriminative gesture generation
-	Use Henny's gesture model?
 
-6/8/2019 (6/7/2019)
-Find out how to interface pyro, which requires python 3, with ros, which uses python 2.
+6/11/2019
+Testing gestures.py with gesture=None, ended with belief [0.0427, 0.5851, 0.3722]. It seems SVI will deviate from prior randomly if there is no reason to update it. Verified with 'useless observations.py'. How can we remedy this? Lowering learning rate helps a bit, but this seems pretty problematic. 
+We could: ignore step if the gradient is too small, look for randomness in step direction and reset/ use a type of average. Run SVI twice, take average. Deal with this later
+TODO TODAY:
+	Heuristic decision maker
+	Connect to baxter
+	Stretch goals:
+		Get lexicon to update during trial. Should exploit gesture.
+		Filter out prepositions, verbs, etc.
 
-6/9/2019
-Eric says use tcp/websocket to interface python 2/3
-Put intra-trial inference in main
-
-~~Psuedo code~~
-During trial:
-	sample desired item. run model on it. 
 
 ~~~~~~~~TODO~~~~~~~~
 ~~Short Term:~~
@@ -56,3 +46,26 @@ Q: Does a dirichlet belief support the kind of inference we want? It would likel
 	Learning and using language via recursive pragmatic reasoning about other agents has probability of object given word, and maintains dirichlet prior over this. Starting with base listener feels weird, since we are the listener and we don't know jack.
 
 We use pyro.set_rng(0) and do no other sampling (in att_set_test), yet the results are random?
+
+6/7/2019:
+Look up contextual deixis. We need to decide how to model gesture. In fetch, people seemed to point naively.
+	We could look through fetch data and create model.
+	google scholar queries (no relevant results in top 5):
+		contextual deixis
+		contextual deixis gesture
+		rational gesture
+		discriminative deictic gesture
+		discriminative gesture generation
+	Use Henny's gesture model?
+
+6/8/2019 (6/7/2019)
+Find out how to interface pyro, which requires python 3, with ros, which uses python 2.
+
+6/9/2019
+Eric says use tcp/websocket to interface python 2/3
+Put intra-trial inference in main
+
+6/10/2019
+Should gesture and utterance be treated independently? For now.
+Filter out structure words
+Should we infer lexicon within a trial? If we allow abstract questions, ex. is this green, then kinda. Real question is, should we infer lexicon without strict supervision? If we plan to get proper supervision later, this may add unnecessary noise and waste time.

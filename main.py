@@ -23,7 +23,7 @@ pyro.set_rng_seed(0)
 #TODO change RSA to use whole utterance. 
 #Will need to use cost term. May need to use sampling to avoid combinatorial explosion.
 Revelation = namedtuple('Revelation', ['item','word_ids', 'values'])
-
+# Trajectory = namedtuple('Trajectory', )
 class Context():
 	"""
 	A context is a set of items present, and a count of words attributed to each item
@@ -50,7 +50,15 @@ class Context():
 			new_word_counts[:][0:self.word_counts.shape[1]] = self.word_counts
 			self.word_counts = new_word_counts
 
-
+def get_lexicon():
+	num_items = len(Context.words_by_item)
+	num_words = len(Context.all_words)
+	lexicon = torch.empty(num_items, num_words)
+	for i in range(num_items):
+		lexicon[i][Context.words_by_item[i]] = torch.tensor(Context.values_by_item[i], dtype=torch.float)
+		unkown_words = [w for w in range(num_words) if w not in Context.words_by_item[i]]
+		lexicon[i][unkown_words] = pyro.param('vocab_believed_{}'.format(i), torch.ones(len(unkown_words)) * 0.5, constraint=constraints.unit_interval)
+	return lexicon
 def rsa(s_0, listener_prior=None, depth=1, theta=5.):
 	"""
 	:param s_0: [s][u] (does not need to be normalized)
@@ -68,10 +76,12 @@ def rsa(s_0, listener_prior=None, depth=1, theta=5.):
 		s_2 = softmax(l_1, theta=theta)  # [s][u]  #Should actually softmax logprob
 	return s_2
 
-def language_model(contexts, num_items, use_rsa=True, theta = 5.):
+def language_model(target_item, items_present, utterances, traj_id, use_rsa=True, theta = 5.):
 	# print("known words and values:\n{}\n{}".format(known_words_by_item,known_values_by_item))
+	num_items = len(items_present)
 	num_words = len(Context.all_words)
-	item_plate = pyro.plate('item_plate', num_items)
+	item_plate = pyro.plate('item_plate_{}'.format(traj_id), num_items)
+	utterance_plate = pyro.plate('utterance_plate_{}'.format(traj_id), len(utterances))
 	s_0 = torch.empty((num_items,num_words))
 	for i in item_plate:
 		# print("s_0[{}]".format(i))
@@ -80,19 +90,26 @@ def language_model(contexts, num_items, use_rsa=True, theta = 5.):
 		unkown_words = [w for w in range(num_words) if w not in Context.words_by_item[i]]
 		s_0[i][unkown_words] = pyro.param('vocab_believed_{}'.format(i), torch.ones(len(unkown_words)) * 0.5, constraint=constraints.unit_interval)
 		# print(s_0[i])
-	for c_id, c in enumerate(contexts):
-		s_0_local = s_0[list(c.items)]
-		assert s_0_local.shape == (len(c.items), num_words), "{};   {}".format(s_0_local.shape, (len(c.items), num_words))
-		s_2 = rsa(s_0=s_0_local, theta=theta) if use_rsa else s_0_local
-		for i in item_plate:
-			pyro.sample('word_count_{}_{}'.format(c_id,i), dist.Multinomial(
-				total_count=c.word_counts[i].sum().item(), probs=s_2[i]),obs=c.word_counts[i])
+	target_item_local_id = items_present.index(target_item)
+	s_0_local = s_0[list(items_present)]
+	s_2 = rsa(s_0=s_0_local, theta=theta) if use_rsa else s_0_local
+	for u_id in utterance_plate:
+		pyro.sample('utterance_{}_{}'.format(traj_id, u_id), dist.Categorical(s_2[target_item_local_id]), obs=torch.tensor(utterances[u_id]))
+	# for c_id, c in enumerate(contexts):
+	# 	s_0_local = s_0[list(c.items)]
+	# 	assert s_0_local.shape == (len(c.items), num_words), "{};   {}".format(s_0_local.shape, (len(c.items), num_words))
+	# 	s_2 = rsa(s_0=s_0_local, theta=theta) if use_rsa else s_0_local
+	# 	for i in item_plate:
+	# 		pyro.sample('word_count_{}_{}'.format(c_id,i), dist.Multinomial(
+	# 			total_count=c.word_counts[i].sum().item(), probs=s_2[i]),obs=c.word_counts[i])
 	return s_0
 
-def language_guide(contexts, num_items, use_rsa=True, theta= 5.):
+def language_guide(target_item, items_present, utterances, traj_id, use_rsa=True, theta= 5.):
 	# print("known words and values:\n{}\n{}".format(known_words_by_item,known_values_by_item))
+
+	num_items = len(items_present)
 	num_words = len(Context.all_words)
-	item_plate = pyro.plate('item_plate', num_items)
+	item_plate = pyro.plate('item_plate_{}'.format(traj_id), num_items)
 	s_0 = torch.empty((num_items,num_words))
 	for i in item_plate:
 		# print("s_0[{}]".format(i))
@@ -103,28 +120,58 @@ def language_guide(contexts, num_items, use_rsa=True, theta= 5.):
 		# print(s_0[i])
 	return s_0
 
-def gesture_model(target_loc, head_loc, obs_gestures, arm_length = 0.5, noise = .1):
+def gesture_model(target_item, gestures, traj_id, arm_length = 0.5, noise = .1):
 	"""
 	:param target: target_location - human_location
 	"""
-	ideal_vector = cart2sph(target_loc - head_loc)
-	dist2target = ideal_vector[2]
-	# ideal_vector[2] = arm_length
-	covariance_matrix = torch.eye(3)
-	covariance_matrix[2] = 0.001
-	covariance_matrix *= noise * (dist2target - arm_length)  
+	#TODO add possibility of None gesture (see gestures.py)
+	gesture_plate = pyro.plate('gesture_plate_{}'.format(traj_id), len(gestures))
+	target_loc = Context.item_locs[target_item]
+	for g_id in gesture_plate:
+		head_loc = gestures[g_id][0:3]
+		finger_loc = gestures[g_id][3:]  #TODO change to use MR style gestures
+		cur_gesture = cart2sph(finger_loc - head_loc)
+		ideal_vector = cart2sph(target_loc - head_loc)
+		dist2target = ideal_vector[2]
+		# ideal_vector[2] = arm_length
+		covariance_matrix = torch.eye(3)
+		covariance_matrix[2] = 0.001
+		covariance_matrix *= noise * (dist2target - arm_length)  
 
-	distance = torch.norm(ideal_vector,2)
-	gesture = pyro.sample('gesture', dist.MultivariateNormal(loc=ideal_vector, covariance_matrix = torch.eye(3) * noise * distance), obs = obs_gesture)
-	return gesture
+		distance = torch.norm(ideal_vector,2)
+		cur_gesture = pyro.sample('gesture_{}_{}'.format(traj_id,g_id), dist.MultivariateNormal(loc=ideal_vector, covariance_matrix = torch.eye(3) * noise * distance), obs = cur_gesture)
+	# return gesture
 
-def trial_model(item_locs, head_loc, obs_gestures, obs_words, arm_length = 0.5, noise = .1):
-	target_item = pyro.sample('target_item', dist.Categorical(pyro.param('item_probs')))
-	target_loc = item_locs[target_item]
-	gesture = gesture_model(target_loc, head_loc, obs_gesture, arm_length = 0.5, noise = .1)
+def main_model(trajectories):
+	"""
+	:param trajectories: [target_item_id or string for pyro.param belief],[items present], [utterances],[gestures] (in the future, actions)
+	"""
+	# target_item = pyro.sample('target_item', dist.Categorical(pyro.param('item_probs')))
+	# target_loc = Context.item_locs[target_item]
+	# gesture = gesture_model(target_loc, head_loc, obs_gesture, arm_length = 0.5, noise = .1)
+	for traj_id in pyro.plate('trajectory_plate',len(trajectories)):
+		target_item, items_present, utterances, gestures = trajectories[traj_id]
+		target_belief_name = None
+		#If we don't know the target item, sample it
+		if type(target_item) is str:
+			target_belief_name = target_item
+			target_probs = pyro.param(target_belief_name, torch.ones(len(items_present))/len(items_present), constraint = constraints.simplex)
+			target_item = pyro.sample('target_item_{}'.format(traj_id), dist.Categorical(target_probs))
+		#Sample language
+		language_model(target_item, items_present, utterances, traj_id)
+		#Sample gesture
+		gesture_model(target_item, gestures, traj_id) #gestures = [head position] + [finger position]
 
-def trial_guide(item_locs, head_loc, obs_gestures, obs_words, arm_length = 0.5, noise = .1):
-	target_item = pyro.sample('target_item', dist.Categorical(pyro.param('item_probs')))
+def main_guide(trajectories, **kwargs):
+	for traj_id in pyro.plate('trajectory_plate',len(trajectories)):
+		target_item, items_present, utterances, gestures = trajectories[traj_id]
+		target_belief_name = None
+		#If we don't know the target item, sample it
+		if type(target_item) is str:
+			target_belief_name = target_item
+			target_probs = pyro.param(target_belief_name, torch.ones(len(items_present))/len(items_present), constraint = constraints.simplex)
+			target_item = pyro.sample('target_item_{}'.format(traj_id), dist.Categorical(target_probs))
+		language_guide(target_item, items_present, utterances, traj_id)
 
 def generate_observations(s_0_true=None, num_utterances_per_item=1000, theta=5., context_list = None, skipped_items = ()):
 	if s_0_true is None:
@@ -148,6 +195,9 @@ def generate_observations(s_0_true=None, num_utterances_per_item=1000, theta=5.,
 	return observations
 
 def update_knowledge(item, words, values):
+	if type(words) is str:
+		words = [words]
+		values = [values]
 	new_words_ids = []
 	new_values = []
 	for w_id_in_revelation, w in enumerate(words):
@@ -177,7 +227,21 @@ def update_beliefs(item, word_ids_to_remove):
 	param_store.setdefault('vocab_believed_{}'.format(item), vocab_believed_new, constraint=constraints.unit_interval)
 	# param_store.__setitem__('vocab_believed_{}'.format(item), vocab_believed_new)
 	return pyro.param('vocab_believed_{}'.format(item))
-
+def add_words(words):
+	new_words = [w for w in words if w not in Context.all_words]
+	# num_old_words = len(Context.all_words)
+	num_new_words = len(new_words)
+	num_items = len(Context.words_by_item)
+	for item in range(num_items):
+		#Update the vocab_believed
+		param_store = pyro.get_param_store()
+		vocab_believed = pyro.param('vocab_believed_{}'.format(item), torch.ones(len(Context.all_words)) * 0.5, constraint=constraints.unit_interval)
+		num_unknown_old_words = vocab_believed.shape[0]
+		vocab_believed_new = torch.ones(num_unknown_old_words + num_new_words) * 0.5
+		vocab_believed_new[0:num_unknown_old_words] = vocab_believed
+		param_store.__delitem__('vocab_believed_{}'.format(item))
+		param_store.setdefault('vocab_believed_{}'.format(item), vocab_believed_new, constraint=constraints.unit_interval)
+	Context.all_words.extend(new_words)
 def update_with_revelations(svi, revelations, time_limit, svi_args):
 	"""
 	Based on observation, will update knowledge if applicable, then run SVI on the remaining belief until
@@ -185,14 +249,15 @@ def update_with_revelations(svi, revelations, time_limit, svi_args):
 	"""
 	start_time = time.time()
 	for r in revelations:
-		word_ids_to_remove = update_knowledge(r.item, r.words, r.values)
+		word_ids_to_remove = update_knowledge(r.item, r.word_ids, r.values)
 		update_beliefs(r.item, word_ids_to_remove)
 	while time.time() - start_time < time_limit:
 		svi.step(**svi_args)
 	# svi_args["verbose"] = True
-def initialize_knowledge(num_items):
+def initialize_knowledge(num_items, item_locs):
 	Context.words_by_item = [[] for _ in range(num_items)]
 	Context.values_by_item = [[] for _ in range(num_items)]
+	Context.item_locs = torch.tensor(item_locs, dtype=torch.float) if type(item_locs) is not torch.Tensor else item_locs
 def att_set_test():
 	num_items = 3
 	initialize_knowledge(num_items)
@@ -220,50 +285,98 @@ def att_set_test():
 	update_with_revelations(svi=svi, revelations=[revelations[1]],svi_args=svi_args, time_limit=time_limit)
 	print(language_model(context_list, num_items))
 
-def run_trials():
+def run_trials(svi_time = 1):
+	param_store = pyro.get_param_store()
+	autopilot_utterances = [[['face']] * 100] * 2
+	autopilot_gestures = [[torch.tensor([0,0,0,-1,1,0], dtype=torch.float)] * 100] *2
+	autopilot_targets = [0,0]
+	autopilot = True
 	num_items = 3
-	initialize_knowledge(num_items)
-	# num_words = 0
+	initialize_knowledge(num_items, item_locs= [[-1.,1,0], [0.,1,0], [1.,1,0]])
 	all_words = []
 	Context.all_words = all_words
 	context = Context(items=(0,1,2))
 	context_list = [context]
+	trajectories = []  #[target_item_id or string for pyro.param belief],[items present], [utterances],[gestures]
 	pyro.clear_param_store()
 	adam_params = {"lr": 0.05, "betas": (0.95, 0.999)}
 	optimizer = Adam(adam_params)
-	svi = SVI(language_model, language_guide, optimizer, loss=Trace_ELBO())
-	num_trials = 5
+	svi = SVI(main_model, main_guide, optimizer, loss=Trace_ELBO())
+	num_trials = 2
 	for trial_num in range(num_trials):
+		print("trial_num: {}".format(trial_num))
+		#Reset target
+		cur_traj = ["target_item_{}_belief".format(trial_num), context.items, [],[]]
+		utterances, gestures = cur_traj[2:]
+		trajectories.append(cur_traj)
 		#Store these words until we know which object they describe
-		words_heard_this_trial = []
+		# words_heard_this_trial = []
 		target_item = None
 		trial_terminated = False
+		trial_step = 0
 		while not trial_terminated:
-			words = raw_input("Speak: ")
-			gesture = raw_input("Point: ")
-			#Update belief over target_item
-
+			print("trial_step: {}".format(trial_step))
+			print("Lexicon:\n{}".format(get_lexicon()))
+			if autopilot and trial_step < len(autopilot_utterances[trial_num]):
+				words = autopilot_utterances[trial_num][trial_step]
+				print("You said: {}".format(words))
+			else:
+				words = input("Speak: ").split(" ")
+			add_words(words)
+			# all_words.extend([w for w in words if w not in all_words]) #TODO check that lexicon belief accounts for new words
+			if autopilot and trial_step < len(autopilot_gestures[trial_num]):
+				gesture = autopilot_gestures[trial_num][trial_step]
+				print("You pointed: {}".format(gesture))
+			else:
+				gesture = torch.tensor([float(x) for x in input("Point: ").split()], dtype=torch.float)
+			#FOr now, assume words has single word. Fix later
+			utterances.append(all_words.index(words[0]))
+			gestures.append(gesture)
+			#Infer
+			svi_start_time = time.time()
+			while time.time() - svi_start_time < svi_time:
+				svi.step(trajectories=trajectories)
+			target_item_belief = pyro.param(cur_traj[0])
+			print("new target belief:\n{}".format(target_item_belief))
+			print("Lexicon:\n{}".format(get_lexicon()))
 			#Act
+			if target_item_belief.max() > 0.9:
+				trial_terminated = True
+				if autopilot and trial_num < len(autopilot_targets):
+					target_item = autopilot_targets[trial_num]
+				else:
+					target_item = input("CHEAT: What item: ")
+			trial_step += 1
+		param_store.__delitem__('target_item_{}_belief'.format(trial_num))
+		cur_traj[0] = target_item
+		words_heard_this_trial = list(set([u for u in utterances]))  #TODO change to work for set of words utterances
+		print("words_heard_this_trial: {}".format(words_heard_this_trial))
+		revelations = [Revelation(target_item, words_heard_this_trial, [1 for _ in words_heard_this_trial])]	
+		update_with_revelations(svi=svi, revelations = revelations, svi_args={'trajectories':trajectories}, time_limit=svi_time)	
 
-			
-		for w in words_heard_this_trial:
-			context.hear(target_item, w)
 
-
-	revelations = []
-	revelations.append(Revelation(0,[0],[1]))
-	revelations.append(Revelation(1,[1],[1]))
-	svi_args = {
-		'contexts':context_list,
-		'num_items':num_items,
-		'use_rsa':True
-	}
-	time_limit = 3
-	context.hear(0,0)
-	update_with_revelations(svi=svi, revelations=[revelations[0]],svi_args=svi_args, time_limit=time_limit)
-	context.hear(1,1)
-	update_with_revelations(svi=svi, revelations=[revelations[1]],svi_args=svi_args, time_limit=time_limit)
-	print(language_model(context_list, num_items))
-
+	# revelations = []
+	# revelations.append(Revelation(0,[0],[1]))
+	# revelations.append(Revelation(1,[1],[1]))
+	# svi_args = {
+	# 	'contexts':context_list,
+	# 	'num_items':num_items,
+	# 	'use_rsa':True
+	# }
+	# time_limit = 3
+	# context.hear(0,0)
+	# update_with_revelations(svi=svi, revelations=[revelations[0]],svi_args=svi_args, time_limit=time_limit)
+	# context.hear(1,1)
+	# update_with_revelations(svi=svi, revelations=[revelations[1]],svi_args=svi_args, time_limit=time_limit)
+	# print(language_model(context_list, num_items))
+def act(target_item_belief):
+	#TODO make less stupid. Incorporate lexicon, item locations
+	max_prob_id = target_item_belief.argmax()
+	max_prob = target_item_belief[max_prob_id]
+	if max_prop > 0.9:
+		return 'pick {}'.format(max_prob_id)
+	else:
+		return 'point {}'.format(max_prob_id)
 if __name__ == "__main__":
-	att_set_test()
+	# att_set_test()
+	run_trials()

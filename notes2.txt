@@ -1,0 +1,16 @@
+store trajectories by trial. use parallel trial plate (sequential for now, parallelize later)
+trajectories = []
+trajectory.target_item = int if known, else string corresponding to param belief.
+	The belief could just be 'item_probs_<trajectory id>'. This makes it harder to connect targets across trajectories, but we shouldn't need to anyway. This disallows throwing away trajectories, keep the id.
+trajectory.utterances = list of words
+trajectory.gestures
+
+If this merging item and lexicon inference works poorly, split and use bayes rule for item belief using approx. lexicon and gesture probs.
+
+
+make gesture sometimes return none. How?
+
+
+Need function to add new word to vocab. Really, take in set of items, set of words, but this will do for now
+
+Lexicon is not being updated during trial. Why?

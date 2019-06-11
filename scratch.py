@@ -81,9 +81,26 @@ def unzip_example():
 # param_store = pyro.get_param_store()
 # param_store.__delitem__('a')
 
-cov = torch.eye(3)
-cov[2][2] = .0001
-target = torch.tensor([1.,1,1])
-for i in range(10):
-	a = dist.MultivariateNormal(loc=target, covariance_matrix = cov).sample()
-	print(a)
+# cov = torch.eye(3)
+# cov[2][2] = .0001
+# target = torch.tensor([1.,1,1])
+# for i in range(10):
+# 	a = dist.MultivariateNormal(loc=target, covariance_matrix = cov).sample()
+# 	print(a)
+
+# a = torch.tensor([[1,2,3],[4,5,6]])
+# print(type(a))
+# a = 0 if type(a) is not torch.Tensor else a
+# b = 0 if type([0,1,2]) is not torch.Tensor else a
+# print(a)
+# print(b)
+
+
+# a = [0,1,[],[]]
+# b,c = a[2:]
+# b.append(2)
+# c.append(3)
+# print(a)
+# a.extend([1,2,3])
+# print(a)
+print("cake: {}".format(torch.tensor([0,0,0,-1,1,0], dtype=torch.float)))

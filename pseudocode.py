@@ -1,3 +1,14 @@
+all_words = []
+context_list = []  #Each context is a tuple of item_id's
+known_words_by_item = []  #[item_id][i] = i'th word with known value for item_id
+known_word_values_by_item = []  #[item_id][i] = 1 if all_words[known_words_by_item[item_id][i]] applies to item_id, else 0
+
+#In a more general setting, we could try to infer object properties by observing them in different contexts. Ex. wood burns with air
+#This would benefit from sampling words/attributes before sampling the observation itself
+utterances_by_item_by_context = []
+
+#Store observations for the current trial locally
+
 def run_trials():
 	for trial_num in range(trials):
 		observations = []
