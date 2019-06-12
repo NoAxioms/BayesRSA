@@ -369,26 +369,11 @@ def run_trials(svi_time = 1):
 		revelations = [Revelation(target_item, words_heard_this_trial, [1 for _ in words_heard_this_trial])]	
 		update_with_revelations(svi=svi, revelations = revelations, svi_args={'trajectories':trajectories}, time_limit=svi_time)	
 
-
-	# revelations = []
-	# revelations.append(Revelation(0,[0],[1]))
-	# revelations.append(Revelation(1,[1],[1]))
-	# svi_args = {
-	# 	'contexts':context_list,
-	# 	'num_items':num_items,
-	# 	'use_rsa':True
-	# }
-	# time_limit = 3
-	# context.hear(0,0)
-	# update_with_revelations(svi=svi, revelations=[revelations[0]],svi_args=svi_args, time_limit=time_limit)
-	# context.hear(1,1)
-	# update_with_revelations(svi=svi, revelations=[revelations[1]],svi_args=svi_args, time_limit=time_limit)
-	# print(language_model(context_list, num_items))
 def act(target_item_belief):
 	#TODO make less stupid. Incorporate lexicon, item locations
 	max_prob_id = target_item_belief.argmax()
 	max_prob = target_item_belief[max_prob_id]
-	if max_prop > 0.9:
+	if max_prob > 0.9:
 		return 'pick {}'.format(max_prob_id)
 	else:
 		return 'point {}'.format(max_prob_id)
