@@ -3,7 +3,7 @@ Generate objects
 Pick object
 Generate language for picked object
 """
-import os, copy
+import os, copy, socket, json
 import time
 from collections import namedtuple
 import warnings
@@ -23,7 +23,12 @@ pyro.set_rng_seed(0)
 #TODO change RSA to use whole utterance. 
 #Will need to use cost term. May need to use sampling to avoid combinatorial explosion.
 Revelation = namedtuple('Revelation', ['item','word_ids', 'values'])
-# Trajectory = namedtuple('Trajectory', )
+use_socket = False
+if use_socket:
+	socket_host = '192.168.0.244'
+	socket_port = 8089
+	clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	clientsocket.connect(('192.168.0.244', 8089))
 class Context():
 	"""
 	A context is a set of items present, and a count of words attributed to each item
@@ -285,6 +290,13 @@ def att_set_test():
 	update_with_revelations(svi=svi, revelations=[revelations[1]],svi_args=svi_args, time_limit=time_limit)
 	print(language_model(context_list, num_items))
 
+def send_message(target_item, lexicon, action):
+	m = {
+		'target_item':target_item.tolist(),
+		'lexicon':lexicon.tolist(),
+		'action':action
+	}
+	clientsocket.send(bytes(json.dumps(m),'UTF-8'))
 def run_trials(svi_time = 1):
 	param_store = pyro.get_param_store()
 	autopilot_utterances = [[['face']] * 100] * 2
@@ -338,7 +350,10 @@ def run_trials(svi_time = 1):
 				svi.step(trajectories=trajectories)
 			target_item_belief = pyro.param(cur_traj[0])
 			print("new target belief:\n{}".format(target_item_belief))
-			print("Lexicon:\n{}".format(get_lexicon()))
+			lexicon = get_lexicon()
+			print("Lexicon:\n{}".format(lexicon))
+			action = "pick nose"
+			if use_socket: send_message(target_item_belief,lexicon,action)
 			#Act
 			if target_item_belief.max() > 0.9:
 				trial_terminated = True

@@ -1,4 +1,4 @@
-import os, time
+import os, time, json
 import torch
 import pyro
 import pyro.distributions as dist
@@ -103,4 +103,12 @@ def unzip_example():
 # print(a)
 # a.extend([1,2,3])
 # print(a)
-print("cake: {}".format(torch.tensor([0,0,0,-1,1,0], dtype=torch.float)))
+# print("cake: {}".format(torch.tensor([0,0,0,-1,1,0], dtype=torch.float)))
+a = torch.randn(2,2)
+b = a.tolist()
+print(a)
+m = {'b':b}
+n = json.dumps(m)
+c = torch.tensor(json.loads(n)['b'])
+print(c)
+# print(n)
