@@ -85,6 +85,7 @@ def language_model(target_item, items_present, utterances, traj_id, use_rsa=True
 	# print("known words and values:\n{}\n{}".format(known_words_by_item,known_values_by_item))
 	num_items = len(items_present)
 	num_words = len(Context.all_words)
+	items_present = torch.tensor(list(items_present))
 	item_plate = pyro.plate('item_plate_{}'.format(traj_id), num_items)
 	utterance_plate = pyro.plate('utterance_plate_{}'.format(traj_id), len(utterances))
 	s_0 = torch.empty((num_items,num_words))
@@ -95,8 +96,9 @@ def language_model(target_item, items_present, utterances, traj_id, use_rsa=True
 		unkown_words = [w for w in range(num_words) if w not in Context.words_by_item[i]]
 		s_0[i][unkown_words] = pyro.param('vocab_believed_{}'.format(i), torch.ones(len(unkown_words)) * 0.5, constraint=constraints.unit_interval)
 		# print(s_0[i])
-	target_item_local_id = items_present.index(target_item)
-	s_0_local = s_0[list(items_present)]
+	# target_item_local_id = items_present.index(target_item)
+	target_item_local_id = tensor_index(target_item,items_present)
+	s_0_local = s_0[items_present]
 	s_2 = rsa(s_0=s_0_local, theta=theta) if use_rsa else s_0_local
 	for u_id in utterance_plate:
 		pyro.sample('utterance_{}_{}'.format(traj_id, u_id), dist.Categorical(s_2[target_item_local_id]), obs=torch.tensor(utterances[u_id]))
@@ -161,7 +163,7 @@ def main_model(trajectories):
 		if type(target_item) is str:
 			target_belief_name = target_item
 			target_probs = pyro.param(target_belief_name, torch.ones(len(items_present))/len(items_present), constraint = constraints.simplex)
-			target_item = pyro.sample('target_item_{}'.format(traj_id), dist.Categorical(target_probs))
+			target_item = pyro.sample('target_item_{}'.format(traj_id), dist.Categorical(target_probs), infer={"enumerate":"parallel"})
 		#Sample language
 		language_model(target_item, items_present, utterances, traj_id)
 		#Sample gesture
@@ -175,7 +177,7 @@ def main_guide(trajectories, **kwargs):
 		if type(target_item) is str:
 			target_belief_name = target_item
 			target_probs = pyro.param(target_belief_name, torch.ones(len(items_present))/len(items_present), constraint = constraints.simplex)
-			target_item = pyro.sample('target_item_{}'.format(traj_id), dist.Categorical(target_probs))
+			target_item = pyro.sample('target_item_{}'.format(traj_id), dist.Categorical(target_probs), infer={"enumerate":"parallel"})
 		language_guide(target_item, items_present, utterances, traj_id)
 
 def generate_observations(s_0_true=None, num_utterances_per_item=1000, theta=5., context_list = None, skipped_items = ()):
@@ -313,7 +315,8 @@ def run_trials(svi_time = 1):
 	pyro.clear_param_store()
 	adam_params = {"lr": 0.05, "betas": (0.95, 0.999)}
 	optimizer = Adam(adam_params)
-	svi = SVI(main_model, main_guide, optimizer, loss=Trace_ELBO())
+	# svi = SVI(main_model, main_guide, optimizer, loss=Trace_ELBO())
+	svi = SVI(main_model, main_guide, optimizer, loss=TraceEnum_ELBO())
 	num_trials = 2
 	for trial_num in range(num_trials):
 		print("trial_num: {}".format(trial_num))

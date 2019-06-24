@@ -64,7 +64,7 @@ def bayes_rule(b, a_cond_b, a=None, debug=False):
 		print("nan_id:\n", nan_id)
 	return b_cond_a
 
-
+#TODO broadcast these
 def l1_distance(a, b):
 	return torch.abs(a - b).sum()
 
@@ -81,3 +81,20 @@ def sph2cart(sph):
 	y = rcos_theta * torch.sin(sph[0])
 	z = sph[2] * torch.sin(1)
 	return torch.tensor([x,y,z])
+
+def tensor_index(tensor, values):
+	"""
+	Assuming each item in tensor appears once in values, returns a tensor of the indices
+	"""
+	# if type(tensor) is int:
+		# tensor = torch.tensor([tensor])
+	if tensor.shape == torch.Size([]):
+		print('car')
+		tensor = torch.tensor([tensor.item()])
+	print(tensor.shape)
+	print(values.shape)
+	print(torch.tensor([2]))
+	c =  torch.nonzero(tensor[..., None] == values)
+	print("tensor_index")
+	print("{}\n{}\n{}".format(tensor,values,c))
+	return c[:,1]

@@ -104,11 +104,38 @@ def unzip_example():
 # a.extend([1,2,3])
 # print(a)
 # print("cake: {}".format(torch.tensor([0,0,0,-1,1,0], dtype=torch.float)))
-a = torch.randn(2,2)
-b = a.tolist()
-print(a)
-m = {'b':b}
-n = json.dumps(m)
-c = torch.tensor(json.loads(n)['b'])
-print(c)
+# a = torch.randn(2,2)
+# b = a.tolist()
+# print(a)
+# m = {'b':b}
+# n = json.dumps(m)
+# c = torch.tensor(json.loads(n)['b'])
+# print(c)
 # print(n)
+def find(tensor, values):
+    c =  torch.nonzero(tensor[..., None] == values)
+    return c
+
+
+def tensor_index_test():
+	a = torch.tensor([0])
+	print(a)
+	b = torch.tensor([0,2,3])
+	print(b)
+	c = find(a,b)
+	print(c)
+
+	for row in range(c.shape[0]):
+		a_ind, b_ind = c[row]
+		assert b[b_ind] == a[a_ind]
+	print(c[:,1])
+
+def indexing_example():
+	a = torch.arange(5)
+	ind = (0,2,3)
+	# print(a[ind])
+	indt = torch.tensor(list(ind))
+	print(a[indt])
+if __name__ == "__main__":
+	tensor_index_test()
+	# indexing_example()
