@@ -115,10 +115,26 @@ def cart2sph_legacy(cart):
 	return torch.tensor([az,el,r])
 
 def sph2cart(sph):
+	"""
+	:param sph: eiter 1d or nd tensor
+	"""
+	sph_flat = sph.view(-1,3)
+	cart_flat = torch.empty(sph_flat.shape)
+	r_flat = sph_flat[:,2]
+	cos_theta_flat = torch.cos(sph_flat[:,1])
+	assert r_flat.shape == cos_theta_flat.shape, "{}, {}".format(r_flat.shape, cos_theta_flat.shape)
+	rcos_theta_flat = r_flat * cos_theta_flat  #If this function doesnt work, check that these have the same shape
+	cart_flat[:,0] = rcos_theta_flat * torch.cos(sph_flat[:,0])
+	cart_flat[:,1] = rcos_theta_flat * torch.sin(sph_flat[:,0])
+	cart_flat[:,2] = sph_flat[:,2] * torch.sin(sph_flat[:,1])
+	cart = cart_flat.view(sph.shape)
+	return cart
+
+def sph2cart_legacy(sph):
 	rcos_theta = sph[2] * torch.cos(sph[1])
 	x = rcos_theta * torch.cos(sph[0])
 	y = rcos_theta * torch.sin(sph[0])
-	z = sph[2] * torch.sin(1)
+	z = sph[2] * torch.sin(sph[1])
 	return torch.tensor([x,y,z])
 
 def tensor_index(tensor, values):

@@ -63,8 +63,23 @@ def cart2sph_test():
 	sphere_legacy[0] = cart2sph_legacy(cart[0])
 	sphere_legacy[1] = cart2sph_legacy(cart[1])
 	sphere_broadcasting = cart2sph(cart)
-	print(l1_distance(sphere_broadcasting,sphere_legacy))
-	assert l1_distance(sphere_broadcasting,sphere_legacy) < 0.001, "{}\n{}".format(sphere_broadcasting,sphere_legacy)
+	# print(l1_distance(sphere_broadcasting,sphere_legacy))
+	assert l1_distance(sphere_broadcasting,sphere_legacy) == 0, "{}\n{}".format(sphere_broadcasting,sphere_legacy)
+	sphere_1 = cart2sph(cart[1])
+	# print(l1_distance(sphere_1,sphere_broadcasting[1]))
+	assert l1_distance(sphere_1,sphere_broadcasting[1]) == 0, "{}\n{}".format(sphere_1,sphere_broadcasting[1])
+
+def sph2cart_test():
+	sph = torch.tensor([[0,0,1],[.2,.3,4]])
+	cart_legacy = torch.empty(2,3)
+	cart_legacy[0] = sph2cart_legacy(sph[0])
+	cart_legacy[1] = sph2cart_legacy(sph[1])
+	cart_broadcasting = sph2cart(sph)
+	assert l1_distance(cart_broadcasting,cart_legacy) == 0, "\n{}\n{}".format(cart_broadcasting,cart_legacy)
+	cart_1 = sph2cart(sph[1])
+	assert l1_distance(cart_1, cart_broadcasting[1]) == 0
+
+
 
 def tensor_view_test():
 	a = torch.tensor([[[0,1,2],[10,11,12]],[[100,101,102],[110,111,112]]])
@@ -74,4 +89,5 @@ def tensor_view_test():
 	print(l1_distance(a,c))
 if __name__ == "__main__":
 	cart2sph_test()
+	sph2cart_test()
 	# tensor_view_test()
