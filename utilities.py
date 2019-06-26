@@ -68,11 +68,50 @@ def bayes_rule(b, a_cond_b, a=None, debug=False):
 def l1_distance(a, b):
 	return torch.abs(a - b).sum()
 
+
+
 def cart2sph(cart):
+	"""
+	:param cart: either a 1d tensor of [x,y,z], or a 2d tensor of [[x0,y0,z0],[x1,y1,z1],...]
+	:return: Either a 1d tensor of [az,el,r] or a 2d tensor of [[az0,el0,r0],[az1,el1,r1],...]
+	use negative indices, ellipses notation bc last indices are event indices.
+	"""
+	#TODO make more memory efficient by assigning az, el, r directly to sph_flat
+	#List of (x,y,z) triples
+	cart_flat = cart.view(-1,3)
+	# print("cart: {}".format(cart))
+	r = torch.norm(cart_flat,2, dim=-1)
+	#TODO vectorize arctan2
+	#Option: flatten to 2d (-1 is (x,y,z)). For i in range(shape[0]):
+	#each (x,y,z) triple gets a single az
+	hxy = torch.norm(cart_flat[...,0:2],2, dim=-1)
+	# print("hxy: {}".format(hxy))
+	az = torch.empty(cart_flat.shape[0])
+	el = torch.empty(cart_flat.shape[0])
+	#Iterate through. 
+	for i in range(cart_flat.shape[0]):
+		torch.atan2(cart_flat[i][1],cart_flat[i][0],out=az[i])
+		torch.atan2(cart_flat[i][2],hxy[i], out=el[i])
+	# print("az, el, r: {}, {}, {}".format(az,el,r))
+	sph_flat = torch.empty(cart_flat.shape)
+	sph_flat[:,0] = az
+	sph_flat[:,1] = el
+	sph_flat[:,2] = r
+	sph = sph_flat.view(cart.shape)
+
+	return sph
+
+def cart2sph_legacy(cart):
+	"""
+	:param cart: either a 1d tensor of [x,y,z], or a 2d tensor of [[x0,y0,z0],[x1,y1,z1],...]
+	:return: Either a 1d tensor of [az,el,r] or a 2d tensor of [[az0,el0,r0],[az1,el1,r1],...]
+	use negative indices, ellipses notation bc last indices are event indices.
+	"""
 	r = torch.norm(cart,2)
 	az = torch.atan2(cart[1],cart[0])
 	hxy = torch.norm(cart[0:2],2)
 	el = torch.atan2(cart[2],hxy)
+	# print("az, el, r: {}, {}, {}".format(az,el,r))
 	return torch.tensor([az,el,r])
 
 def sph2cart(sph):
@@ -98,3 +137,6 @@ def tensor_index(tensor, values):
 	print("tensor_index")
 	print("{}\n{}\n{}".format(tensor,values,c))
 	return c[:,1]
+
+if __name__ == "__main__":
+	pass

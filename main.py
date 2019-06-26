@@ -137,6 +137,8 @@ def gesture_model(target_item, gestures, traj_id, arm_length = 0.5, noise = .1):
 	for g_id in gesture_plate:
 		head_loc = gestures[g_id][0:3]
 		finger_loc = gestures[g_id][3:]  #TODO change to use MR style gestures
+		# print("Finger_loc: {}".format(finger_loc))
+		# print("Head_loc: {}".format(head_loc))
 		cur_gesture = cart2sph(finger_loc - head_loc)
 		ideal_vector = cart2sph(target_loc - head_loc)
 		dist2target = ideal_vector[2]

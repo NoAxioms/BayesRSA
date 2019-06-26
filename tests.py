@@ -15,7 +15,7 @@ from utilities import global_2_local_id, copy_array_sans_indices
 smoke_test = ('CI' in os.environ)
 pyro.enable_validation()
 pyro.set_rng_seed(0)
-from dirichletLearning import *
+from main import *
 
 def bayes_rule_test():  # pass
 	b = torch.tensor([.5, .5])
@@ -56,3 +56,22 @@ def context_test():
 	Context.all_words = a
 	a.append('cat')
 	assert 'cat' in a.all_words
+
+def cart2sph_test():
+	cart = torch.tensor([[1.,0,0], [2,3,4]])
+	sphere_legacy = torch.empty(2,3)
+	sphere_legacy[0] = cart2sph_legacy(cart[0])
+	sphere_legacy[1] = cart2sph_legacy(cart[1])
+	sphere_broadcasting = cart2sph(cart)
+	print(l1_distance(sphere_broadcasting,sphere_legacy))
+	assert l1_distance(sphere_broadcasting,sphere_legacy) < 0.001, "{}\n{}".format(sphere_broadcasting,sphere_legacy)
+
+def tensor_view_test():
+	a = torch.tensor([[[0,1,2],[10,11,12]],[[100,101,102],[110,111,112]]])
+	b = a.view(-1,3)
+	c = b.view(a.shape)
+	print(b)
+	print(l1_distance(a,c))
+if __name__ == "__main__":
+	cart2sph_test()
+	# tensor_view_test()
