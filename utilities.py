@@ -141,17 +141,17 @@ def tensor_index(tensor, values):
 	"""
 	Assuming each item in tensor appears once in values, returns a tensor of the indices
 	"""
-	# if type(tensor) is int:
-		# tensor = torch.tensor([tensor])
+	if type(tensor) is int:
+		tensor = torch.tensor([tensor])
 	if tensor.shape == torch.Size([]):
 		print('car')
 		tensor = torch.tensor([tensor.item()])
-	print(tensor.shape)
-	print(values.shape)
-	print(torch.tensor([2]))
+	# print(tensor.shape)
+	# print(values.shape)
+	# print(torch.tensor([2]))
 	c =  torch.nonzero(tensor[..., None] == values)
-	print("tensor_index")
-	print("{}\n{}\n{}".format(tensor,values,c))
+	# print("tensor_index")
+	# print("{}\n{}\n{}".format(tensor,values,c))
 	return c[:,1]
 
 if __name__ == "__main__":
