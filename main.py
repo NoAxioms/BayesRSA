@@ -301,11 +301,11 @@ def send_message(target_item, lexicon, action):
 		'action':action
 	}
 	clientsocket.send(bytes(json.dumps(m),'UTF-8'))
-def run_trials(svi_time = 1):
+def run_trials(stop_method = 'time', svi_time = 1, convergence_threshold = 0.001):
 	param_store = pyro.get_param_store()
-	autopilot_utterances = [[['face']] * 100] * 2
-	autopilot_gestures = [[torch.tensor([0,0,0,-1,1,0], dtype=torch.float)] * 100] *2
-	autopilot_targets = [0,0]
+	autopilot_utterances = [[['face']] * 100] + [[['moustache']] * 100]
+	autopilot_gestures = [[torch.tensor([0,0,0,-1,1,0], dtype=torch.float)] * 100]  + [[torch.tensor([0,0,0,0,1,0], dtype=torch.float)] * 100]
+	autopilot_targets = [0,1]
 	autopilot = True
 	num_items = 3
 	initialize_knowledge(num_items, item_locs= [[-1.,1,0], [0.,1,0], [1.,1,0]])
@@ -350,9 +350,17 @@ def run_trials(svi_time = 1):
 			utterances.append(all_words.index(words[0]))
 			gestures.append(gesture)
 			#Infer
-			svi_start_time = time.time()
-			while time.time() - svi_start_time < svi_time:
-				svi.step(trajectories=trajectories)
+			#TODO use convergence criterion so I can use time tests. Alternatively, do kl tests.
+			if stop_method == "time":
+				svi_start_time = time.time()
+				while time.time() - svi_start_time < svi_time:
+					svi.step(trajectories=trajectories)
+			elif stop_method == "convergence":
+				#If item belief and lexicon are stable, we are converged
+				#If they are unstable but have stable rolling average?
+				pass
+			else:
+				raise Exception("stop_method {} is unimplemented".format(stop_method))
 			target_item_belief = pyro.param(cur_traj[0])
 			print("new target belief:\n{}".format(target_item_belief))
 			lexicon = get_lexicon()
