@@ -12,5 +12,6 @@ Expand to multi-word utterances (BOW to start)
 	<= 1 day
 Use gesture to inform language - currently, it doesn't understand that pointing to the left and saying "red" means something on the left is probably red.
 	Unknown time. Hopefully < 1 day
+	It seems that lexicon is not updated until the second trial. After that, it seems to be updated rationally but still ignoring gesture.
 Make faster - takes a few seconds to do a proper belief update. Options: Use enumeration. Separate out lexicon model and desired object model. Use explicit belief update (bayes rule) for itendifying item in trial. 
 	1-3 days?

@@ -1,4 +1,4 @@
-import os, copy
+import os, copy, timeit, functools
 import time
 from collections import namedtuple
 import warnings
@@ -58,28 +58,43 @@ def context_test():
 	assert 'cat' in a.all_words
 
 def cart2sph_test():
-	cart = torch.tensor([[1.,0,0], [2,3,4]])
-	sphere_legacy = torch.empty(2,3)
-	sphere_legacy[0] = cart2sph_legacy(cart[0])
-	sphere_legacy[1] = cart2sph_legacy(cart[1])
+	#broadcasting is faster (or just comparable?) than legacy when we have at least 5-7 items.
+	cart = torch.tensor([[1.,0,0], [2,3,4],[2,3,4],[2,3,4],[2,3,4],[2,3,4],[2,3,4]])
+	sphere_legacy = torch.empty(cart.shape[0],3)
+	for row in range(cart.shape[0]):	
+		sphere_legacy[row] = cart2sph_legacy(cart[row])
 	sphere_broadcasting = cart2sph(cart)
 	# print(l1_distance(sphere_broadcasting,sphere_legacy))
 	assert l1_distance(sphere_broadcasting,sphere_legacy) == 0, "{}\n{}".format(sphere_broadcasting,sphere_legacy)
 	sphere_1 = cart2sph(cart[1])
 	# print(l1_distance(sphere_1,sphere_broadcasting[1]))
 	assert l1_distance(sphere_1,sphere_broadcasting[1]) == 0, "{}\n{}".format(sphere_1,sphere_broadcasting[1])
+	#Time tests
+	legacy_timer_half = timeit.Timer(functools.partial(cart2sph_legacy,cart[1]))
+	legacy_time = legacy_timer_half.timeit(1000) * cart.shape[0]
+	print("legacy cart2sph time: {}".format(legacy_time))
+	broadcasting_timer = timeit.Timer(functools.partial(cart2sph,cart))
+	broadcasting_time = broadcasting_timer.timeit(1000)
+	print("broadcasting cart2sph time: {}".format(broadcasting_time))
+
 
 def sph2cart_test():
-	sph = torch.tensor([[0,0,1],[.2,.3,4]])
-	cart_legacy = torch.empty(2,3)
-	cart_legacy[0] = sph2cart_legacy(sph[0])
-	cart_legacy[1] = sph2cart_legacy(sph[1])
+	#broadcasting 3x faster for 5 items
+	sph = torch.tensor([[0,0,1],[.2,.3,4], [.2,.3,4], [.2,.3,4], [.2,.3,4]])
+	cart_legacy = torch.empty(sph.shape[0],3)
+	for row in range(sph.shape[0]):
+		cart_legacy[row] = sph2cart_legacy(sph[row])
 	cart_broadcasting = sph2cart(sph)
 	assert l1_distance(cart_broadcasting,cart_legacy) == 0, "\n{}\n{}".format(cart_broadcasting,cart_legacy)
 	cart_1 = sph2cart(sph[1])
 	assert l1_distance(cart_1, cart_broadcasting[1]) == 0
-
-
+	#Time tests
+	legacy_timer_half = timeit.Timer(functools.partial(sph2cart_legacy,sph[1]))
+	legacy_time = legacy_timer_half.timeit(1000) * sph.shape[0]
+	print("legacy sph2cart time: {}".format(legacy_time))
+	broadcasting_timer = timeit.Timer(functools.partial(sph2cart,sph))
+	broadcasting_time = broadcasting_timer.timeit(1000)
+	print("broadcasting sph2cart time: {}".format(broadcasting_time))
 
 def tensor_view_test():
 	a = torch.tensor([[[0,1,2],[10,11,12]],[[100,101,102],[110,111,112]]])
@@ -87,6 +102,36 @@ def tensor_view_test():
 	c = b.view(a.shape)
 	print(b)
 	print(l1_distance(a,c))
+
+
+def att_set_test():
+	#Ripped from main.py. Probably won't work.
+	num_items = 3
+	initialize_knowledge(num_items)
+	# num_words = 0
+	all_words = ['a','b','c','d']
+	Context.all_words = all_words
+	context = Context(items=(0,1,2))
+	context_list = [context]
+	pyro.clear_param_store()
+	adam_params = {"lr": 0.05, "betas": (0.95, 0.999)}
+	optimizer = Adam(adam_params)
+	svi = SVI(language_model, language_guide, optimizer, loss=Trace_ELBO())
+	revelations = []
+	revelations.append(Revelation(0,[0],[1]))
+	revelations.append(Revelation(1,[0],[1]))
+	svi_args = {
+		'contexts':context_list,
+		'num_items':num_items,
+		'use_rsa':True
+	}
+	time_limit = 1
+	context.hear(0,'a')
+	update_with_revelations(svi=svi, revelations=[revelations[0]],svi_args=svi_args, time_limit=time_limit)
+	context.hear(1,'b')
+	update_with_revelations(svi=svi, revelations=[revelations[1]],svi_args=svi_args, time_limit=time_limit)
+	print(language_model(context_list, num_items))
+
 if __name__ == "__main__":
 	cart2sph_test()
 	sph2cart_test()
