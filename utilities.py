@@ -144,7 +144,7 @@ def tensor_index(tensor, values):
 	if type(tensor) is int:
 		tensor = torch.tensor([tensor])
 	if tensor.shape == torch.Size([]):
-		print('car')
+		# print('car')
 		tensor = torch.tensor([tensor.item()])
 	# print(tensor.shape)
 	# print(values.shape)

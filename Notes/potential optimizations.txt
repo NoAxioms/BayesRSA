@@ -1,1 +1,2 @@
 NumPyro may be better for us since we use such small tensors https://github.com/pyro-ppl/numpyro
+Use PVD configurator tools for generating item locations

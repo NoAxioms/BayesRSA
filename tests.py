@@ -132,7 +132,111 @@ def att_set_test():
 	update_with_revelations(svi=svi, revelations=[revelations[1]],svi_args=svi_args, time_limit=time_limit)
 	print(language_model(context_list, num_items))
 
+def enumeration_time_test():
+	"""
+	Compares speed of inference using enumeration v not using enumeration
+	"""
+	num_trials = 2
+	"""
+	The order of running seems to affect outcome - the second is faster, especially when the second is enumeration. Problem with globals?
+	Possibilities:
+	global/param not being reset
+	Amortization under the hood
+	
+	Checks:
+	Run run_trials twice, with different gestures/vocab/desired items, see if second run is faster and accurate.
+	To facilitate this, refactor run_trials to accept appropriate arguments.
+	"""
+	item_locs0 = torch.tensor([[-1.,1,0], [0.,1,0], [1.,1,0]])
+	autopilot_utterances0 = [[['face']] * 100] + [[['moustache']] * 100]
+	autopilot_gestures0 = [[torch.tensor([0,0,0,-1,1,0], dtype=torch.float)] * 100]  + [[torch.tensor([0,0,0,0,1,0], dtype=torch.float)] * 100]
+	autopilot_targets0 = [0,1]
+
+	item_locs1 = torch.tensor([[-6.,1,0], [-1.,1,0], [3.,1,0]])
+	autopilot_utterances1 = [[['face']] * 100] + [[['moustache']] * 100]
+	autopilot_gestures1 = [[torch.tensor([0,0,0,3,1,0], dtype=torch.float)] * 100]  + [[torch.tensor([0,0,0,-6,1,0], dtype=torch.float)] * 100]
+	autopilot_targets1 = [2,0]
+	domain_args0 = {
+		"item_locs":item_locs0,
+		"autopilot_utterances": autopilot_utterances0,
+		"autopilot_gestures": autopilot_gestures0,
+		"autopilot_targets": autopilot_targets0,
+		"autopilot":True
+	}
+	domain_args1 = {
+		"item_locs":item_locs1,
+		"autopilot_utterances": autopilot_utterances1,
+		"autopilot_gestures": autopilot_gestures1,
+		"autopilot_targets": autopilot_targets1,
+		"autopilot":True
+	}
+	enumeration_beliefs = run_trials(use_enumeration = True, num_trials = num_trials, verbose=False, stop_method = "convergence", domain_args = domain_args0)
+	sans_enumeration_beliefs = run_trials(use_enumeration=False, num_trials=num_trials, verbose=False, stop_method = "convergence", domain_args = domain_args0)
+
+	# enumeration_beliefs = run_trials(use_enumeration = True, num_trials = num_trials)
+	# sans_enumeration_beliefs = run_trials(use_enumeration=False, num_trials=num_trials)
+
+	for t in range(num_trials):
+		print("Enumeration beliefs for trial {}. Num_steps: {}".format(t,len(enumeration_beliefs[t])))
+		for step_num, d in enumerate(enumeration_beliefs[t]):
+			# print(d["target_item"])
+			print(d["svi_time"])
+			print(d["lexicon"])
+		print("sans enumeration beliefs for trial {}. Num_steps: {}".format(t,len(sans_enumeration_beliefs[t])))
+
+		for step_num, d in enumerate(sans_enumeration_beliefs[t]):
+			print(d["svi_time"])
+			print(d["lexicon"])
+
+def run_trials_independence_test():
+	"""
+	Tests whether sequential calls to run_trials are independent
+	THE SECOND RUN IS FASTER?
+	"""
+	item_locs0 = torch.tensor([[-1.,1,0], [0.,1,0], [1.,1,0]])
+	autopilot_utterances0 = [[['face']] * 100] + [[['moustache']] * 100]
+	autopilot_gestures0 = [[torch.tensor([0,0,0,-1,1,0], dtype=torch.float)] * 100]  + [[torch.tensor([0,0,0,0,1,0], dtype=torch.float)] * 100]
+	autopilot_targets0 = [0,1]
+
+	item_locs1 = torch.tensor([[-6.,1,0], [-1.,1,0], [3.,1,0]])
+	autopilot_utterances1 = [[['face']] * 100] + [[['moustache']] * 100]
+	autopilot_gestures1 = [[torch.tensor([0,0,0,3,1,0], dtype=torch.float)] * 100]  + [[torch.tensor([0,0,0,-6,1,0], dtype=torch.float)] * 100]
+	autopilot_targets1 = [2,0]
+	domain_args0 = {
+		"item_locs":item_locs0,
+		"autopilot_utterances": autopilot_utterances0,
+		"autopilot_gestures": autopilot_gestures0,
+		"autopilot_targets": autopilot_targets0,
+		"autopilot":True
+	}
+	domain_args1 = {
+		"item_locs":item_locs1,
+		"autopilot_utterances": autopilot_utterances1,
+		"autopilot_gestures": autopilot_gestures1,
+		"autopilot_targets": autopilot_targets1,
+		"autopilot":True
+	}
+	results0 = run_trials(use_enumeration = True, verbose=False, stop_method = "convergence", domain_args = domain_args0)
+	results1 = run_trials(use_enumeration = True, verbose=False, stop_method = "convergence", domain_args = domain_args1)
+
+	# enumeration_beliefs = run_trials(use_enumeration = True, num_trials = num_trials)
+	# sans_enumeration_beliefs = run_trials(use_enumeration=False, num_trials=num_trials)
+
+	for t in range(len(autopilot_targets0)):
+		print("Domain 0 results for trial {}. Num_steps: {}".format(t,len(results0[t])))
+		for step_num, d in enumerate(results0[t]):
+			print(d["target_item"])
+			print(d["svi_time"])
+			print(d["lexicon"])
+		print("Domain 1 results for trial {}. Num_steps: {}".format(t,len(results1[t])))
+
+		for step_num, d in enumerate(results1[t]):
+			print(d["target_item"])
+			print(d["svi_time"])
+			print(d["lexicon"])
+
 if __name__ == "__main__":
-	cart2sph_test()
-	sph2cart_test()
-	# tensor_view_test()
+	# cart2sph_test()
+	# sph2cart_test()
+	# enumeration_time_test()
+	run_trials_independence_test()
