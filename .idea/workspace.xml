@@ -2,11 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="5df3c997-05a1-47b2-bc56-199b98e4ca9c" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/BayesRSA.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/BayesRSA.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -17,7 +14,7 @@
   <component name="CoverageDataManager">
     <SUITE FILE_PATH="coverage/BayesRSA$utilities.coverage" NAME="utilities Coverage Results" MODIFIED="1549479747831" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/BayesRSA$main.coverage" NAME="main Coverage Results" MODIFIED="1562185834849" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/BayesRSA$tests.coverage" NAME="tests Coverage Results" MODIFIED="1562197046165" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/BayesRSA$tests.coverage" NAME="tests Coverage Results" MODIFIED="1562197883516" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
@@ -33,8 +30,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1241">
-              <caret line="145" column="33" selection-start-line="145" selection-start-column="27" selection-end-line="145" selection-end-column="33" />
+            <state relative-caret-position="578">
+              <caret line="167" column="8" selection-start-line="167" selection-start-column="8" selection-end-line="167" selection-end-column="8" />
             </state>
           </provider>
         </entry>
@@ -63,6 +60,8 @@
       <find>torch</find>
       <find>target_item_local_id</find>
       <find>tensor_ind</find>
+      <find>gesture</find>
+      <find>gesture_gu</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -211,12 +210,12 @@
       <workItem from="1549383027772" duration="5864000" />
       <workItem from="1549478749332" duration="1103000" />
       <workItem from="1562185746322" duration="160000" />
-      <workItem from="1562186607046" duration="4918000" />
+      <workItem from="1562186607046" duration="5494000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="12895000" />
+    <option name="totallyTimeSpent" value="13471000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
@@ -291,8 +290,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1241">
-          <caret line="145" column="33" selection-start-line="145" selection-start-column="27" selection-end-line="145" selection-end-column="33" />
+        <state relative-caret-position="578">
+          <caret line="167" column="8" selection-start-line="167" selection-start-column="8" selection-end-line="167" selection-end-column="8" />
         </state>
       </provider>
     </entry>

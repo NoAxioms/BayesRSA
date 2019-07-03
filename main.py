@@ -104,22 +104,7 @@ def single_word_model(target_item, items_present, utterances, traj_id, use_rsa=T
 
 
 def single_word_guide(target_item, items_present, utterances, traj_id, use_rsa=True, theta= 5.):
-	# print("known words and values:\n{}\n{}".format(known_words_by_item,known_values_by_item))
-
-	# num_items = len(items_present)
-	# num_words = len(Context.all_words)
-	# item_plate = pyro.plate('item_plate_{}'.format(traj_id), num_items)
-	# s_0 = torch.empty((num_items,num_words))
-	# for i in item_plate:
-	# 	# print("s_0[{}]".format(i))
-	# 	s_0[i][Context.words_by_item[i]] = torch.tensor(Context.values_by_item[i], dtype=torch.float)
-	# 	# print(s_0[i])
-	# 	unkown_words = [w for w in range(num_words) if w not in Context.words_by_item[i]]
-	# 	s_0[i][unkown_words] = pyro.param('vocab_believed_{}'.format(i), torch.ones(len(unkown_words)) * 0.5,constraint=constraints.unit_interval)
-	# 	# print(s_0[i])
-	# return s_0
 	pass
-
 
 
 def gesture_model(target_item, gestures, traj_id, arm_length = 0.5, noise = .1):
@@ -146,6 +131,8 @@ def gesture_model(target_item, gestures, traj_id, arm_length = 0.5, noise = .1):
 		cur_gesture = pyro.sample('gesture_{}_{}'.format(traj_id,g_id), dist.MultivariateNormal(loc=ideal_vector, covariance_matrix = torch.eye(3) * noise * distance), obs = cur_gesture)
 	# return gesture
 
+def gesture_guide(target_item, gestures, traj_id, arm_length = 0.5, noise = .1):
+	pass
 def main_model(trajectories, infer = {"enumerate":"parallel"}):
 	"""
 	:param trajectories: [target_item_id or string for pyro.param belief],[items present], [utterances],[gestures] (in the future, actions)
@@ -175,8 +162,10 @@ def main_guide(trajectories,infer={"enumerate":"parallel"}, **kwargs,):
 			target_belief_name = target_item
 			target_probs = pyro.param(target_belief_name, torch.ones(len(items_present))/len(items_present), constraint = constraints.simplex)
 			target_item = pyro.sample('target_item_{}'.format(traj_id), dist.Categorical(target_probs), infer=infer)
+		#Both of the following guide functions are empty, but we call them out of principle.
 		single_word_guide(target_item, items_present, utterances, traj_id)
-
+		gesture_guide(target_item,gestures, traj_id)
+		
 def generate_observations(s_0_true=None, num_utterances_per_item=1000, theta=5., context_list = None, skipped_items = ()):
 	if s_0_true is None:
 		s_0_true = normalize(torch.tensor(
