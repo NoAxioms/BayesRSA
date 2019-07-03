@@ -1,0 +1,4 @@
+Using TraceEnum_ELBO + empty guide function means maximise likelihood learning?
+	https://forum.pyro.ai/t/using-traceenum-elbo-empty-guide-function-means-maximise-likelihood-learning/960
+MAP and Max Likelihood inference
+	https://github.com/pyro-ppl/pyro/issues/570

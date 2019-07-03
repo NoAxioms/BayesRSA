@@ -116,7 +116,7 @@ def att_set_test():
 	pyro.clear_param_store()
 	adam_params = {"lr": 0.05, "betas": (0.95, 0.999)}
 	optimizer = Adam(adam_params)
-	svi = SVI(language_model, language_guide, optimizer, loss=Trace_ELBO())
+	svi = SVI(single_word_model, single_word_guide, optimizer, loss=Trace_ELBO())
 	revelations = []
 	revelations.append(Revelation(0,[0],[1]))
 	revelations.append(Revelation(1,[0],[1]))
@@ -130,7 +130,7 @@ def att_set_test():
 	update_with_revelations(svi=svi, revelations=[revelations[0]],svi_args=svi_args, time_limit=time_limit)
 	context.hear(1,'b')
 	update_with_revelations(svi=svi, revelations=[revelations[1]],svi_args=svi_args, time_limit=time_limit)
-	print(language_model(context_list, num_items))
+	print(single_word_model(context_list, num_items))
 
 def enumeration_time_test():
 	"""

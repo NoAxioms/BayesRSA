@@ -21,7 +21,8 @@ from utilities import *
 smoke_test = ('CI' in os.environ)
 pyro.enable_validation()
 pyro.set_rng_seed(0)
-#TODO change RSA to use whole utterance. 
+#TODO change RSA to use whole utterance.
+#TODO move step_plate (utterance_plate and gesture_plate) to main_model. Add empty utterances/gestures
 #Will need to use cost term. May need to use sampling to avoid combinatorial explosion.
 Revelation = namedtuple('Revelation', ['item','word_ids', 'values'])
 use_socket = False
@@ -44,17 +45,6 @@ class Context():
 	def __init__(self, items):
 		self.items = copy.copy(items)
 		self.word_counts = torch.zeros(len(self.items), len(Context.all_words))
-	def hear(self,item, word):
-		word_id = Context.all_words.index(word)
-		# print("word, id: {}, {}".format(word, word_id))
-		try:
-			self.word_counts[item][word_id] += 1
-		except IndexError:
-			#TODO find pretty, pytorchy way to do this assignment
-			#Create new array of correct size, copy data from old word_counts
-			new_word_counts = torch.zeros(num_items, len(all_words))
-			new_word_counts[:][0:self.word_counts.shape[1]] = self.word_counts
-			self.word_counts = new_word_counts
 
 def get_lexicon():
 	"""
@@ -85,51 +75,52 @@ def rsa(s_0, listener_prior=None, depth=1, theta=5.):
 		s_2 = softmax(l_1, theta=theta)  # [s][u]  #Should actually softmax logprob
 	return s_2
 
-def language_model(target_item, items_present, utterances, traj_id, use_rsa=True, theta = 5.):
+def single_word_model(target_item, items_present, utterances, traj_id, use_rsa=True, theta = 5.):
 	# print("known words and values:\n{}\n{}".format(known_words_by_item,known_values_by_item))
-	num_items = len(items_present)
+	num_items = len(items_present)  #Note that this may be less than the number of known items if some are missing from this context
 	num_words = len(Context.all_words)
 	items_present = torch.tensor(list(items_present))
+	#Both item and utterance plates are sequential
 	item_plate = pyro.plate('item_plate_{}'.format(traj_id), num_items)
 	utterance_plate = pyro.plate('utterance_plate_{}'.format(traj_id), len(utterances))
+	#TODO Memoize s_0 calculation
 	s_0 = torch.empty((num_items,num_words))
-	for i in item_plate:
-		# print("s_0[{}]".format(i))
-		s_0[i][Context.words_by_item[i]] = torch.tensor(Context.values_by_item[i], dtype=torch.float)
-		# print(s_0[i])
-		unkown_words = [w for w in range(num_words) if w not in Context.words_by_item[i]]
-		s_0[i][unkown_words] = pyro.param('vocab_believed_{}'.format(i), torch.ones(len(unkown_words)) * 0.5, constraint=constraints.unit_interval)
-		# print(s_0[i])
+	for i_local_id in item_plate:
+		# print("s_0[{}]".format(i_local_id))
+		#Get the global id of the item, in case not all items are present
+		i_global_id = items_present[i_local_id]
+		s_0[i_local_id][Context.words_by_item[i_global_id]] = torch.tensor(Context.values_by_item[i_global_id], dtype=torch.float)
+		# print(s_0[i_local_id])
+		unkown_words = [w for w in range(num_words) if w not in Context.words_by_item[i_global_id]]
+		s_0[i_local_id][unkown_words] = pyro.param('vocab_believed_{}'.format(i_global_id), torch.ones(len(unkown_words)) * 0.5, constraint=constraints.unit_interval)
+		# print(s_0[i_local_id])
 	# target_item_local_id = items_present.index(target_item)
 	target_item_local_id = tensor_index(target_item,items_present)
 	s_0_local = s_0[items_present]
 	s_2 = rsa(s_0=s_0_local, theta=theta) if use_rsa else s_0_local
 	for u_id in utterance_plate:
 		pyro.sample('utterance_{}_{}'.format(traj_id, u_id), dist.Categorical(s_2[target_item_local_id]), obs=torch.tensor(utterances[u_id]))
-	# for c_id, c in enumerate(contexts):
-	# 	s_0_local = s_0[list(c.items)]
-	# 	assert s_0_local.shape == (len(c.items), num_words), "{};   {}".format(s_0_local.shape, (len(c.items), num_words))
-	# 	s_2 = rsa(s_0=s_0_local, theta=theta) if use_rsa else s_0_local
-	# 	for i in item_plate:
-	# 		pyro.sample('word_count_{}_{}'.format(c_id,i), dist.Multinomial(
-	# 			total_count=c.word_counts[i].sum().item(), probs=s_2[i]),obs=c.word_counts[i])
 	return s_0
 
-def language_guide(target_item, items_present, utterances, traj_id, use_rsa=True, theta= 5.):
+
+def single_word_guide(target_item, items_present, utterances, traj_id, use_rsa=True, theta= 5.):
 	# print("known words and values:\n{}\n{}".format(known_words_by_item,known_values_by_item))
 
-	num_items = len(items_present)
-	num_words = len(Context.all_words)
-	item_plate = pyro.plate('item_plate_{}'.format(traj_id), num_items)
-	s_0 = torch.empty((num_items,num_words))
-	for i in item_plate:
-		# print("s_0[{}]".format(i))
-		s_0[i][Context.words_by_item[i]] = torch.tensor(Context.values_by_item[i], dtype=torch.float)
-		# print(s_0[i])
-		unkown_words = [w for w in range(num_words) if w not in Context.words_by_item[i]]
-		s_0[i][unkown_words] = pyro.param('vocab_believed_{}'.format(i), torch.ones(len(unkown_words)) * 0.5,constraint=constraints.unit_interval)
-		# print(s_0[i])
-	return s_0
+	# num_items = len(items_present)
+	# num_words = len(Context.all_words)
+	# item_plate = pyro.plate('item_plate_{}'.format(traj_id), num_items)
+	# s_0 = torch.empty((num_items,num_words))
+	# for i in item_plate:
+	# 	# print("s_0[{}]".format(i))
+	# 	s_0[i][Context.words_by_item[i]] = torch.tensor(Context.values_by_item[i], dtype=torch.float)
+	# 	# print(s_0[i])
+	# 	unkown_words = [w for w in range(num_words) if w not in Context.words_by_item[i]]
+	# 	s_0[i][unkown_words] = pyro.param('vocab_believed_{}'.format(i), torch.ones(len(unkown_words)) * 0.5,constraint=constraints.unit_interval)
+	# 	# print(s_0[i])
+	# return s_0
+	pass
+
+
 
 def gesture_model(target_item, gestures, traj_id, arm_length = 0.5, noise = .1):
 	"""
@@ -171,7 +162,7 @@ def main_model(trajectories, infer = {"enumerate":"parallel"}):
 			target_probs = pyro.param(target_belief_name, torch.ones(len(items_present))/len(items_present), constraint = constraints.simplex)
 			target_item = pyro.sample('target_item_{}'.format(traj_id), dist.Categorical(target_probs), infer=infer)
 		#Sample language
-		language_model(target_item, items_present, utterances, traj_id)
+		single_word_model(target_item, items_present, utterances, traj_id)
 		#Sample gesture
 		gesture_model(target_item, gestures, traj_id) #gestures = [head position] + [finger position]
 
@@ -184,7 +175,7 @@ def main_guide(trajectories,infer={"enumerate":"parallel"}, **kwargs,):
 			target_belief_name = target_item
 			target_probs = pyro.param(target_belief_name, torch.ones(len(items_present))/len(items_present), constraint = constraints.simplex)
 			target_item = pyro.sample('target_item_{}'.format(traj_id), dist.Categorical(target_probs), infer=infer)
-		language_guide(target_item, items_present, utterances, traj_id)
+		single_word_guide(target_item, items_present, utterances, traj_id)
 
 def generate_observations(s_0_true=None, num_utterances_per_item=1000, theta=5., context_list = None, skipped_items = ()):
 	if s_0_true is None:
