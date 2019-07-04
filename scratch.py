@@ -136,6 +136,14 @@ def indexing_example():
 	# print(a[ind])
 	indt = torch.tensor(list(ind))
 	print(a[indt])
+
+def subtract_from_columns_example():
+	x = outer_sum_example()
+	y = torch.tensor([0.0,0.1,0.2])
+	print(x)
+	print(y)
+	x[:] -= y
+	print(x)
+
 if __name__ == "__main__":
-	tensor_index_test()
-	# indexing_example()
+	subtract_from_columns_example()

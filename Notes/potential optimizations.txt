@@ -1,2 +1,3 @@
 NumPyro may be better for us since we use such small tensors https://github.com/pyro-ppl/numpyro
 Use PVD configurator tools for generating item locations
+Memoize s_0 and s_2 construction? For single word utterances, enumerated targets, three items, they take around 20% of the time, with s_0 taking over half of that.

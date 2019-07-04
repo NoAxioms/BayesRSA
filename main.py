@@ -5,6 +5,7 @@ Generate language for picked object
 """
 import os, copy, socket, json
 from types import SimpleNamespace
+from itertools import combinations
 import time
 from collections import namedtuple
 import warnings
@@ -31,6 +32,10 @@ if use_socket:
 	socket_port = 8089
 	clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	clientsocket.connect(('192.168.0.244', 8089))
+#DEBUG PROFILING CODE
+time_building_s_0 = 0
+time_building_s_2 = 0
+#DEBUG_PROFILING_CODE
 class Context():
 	"""
 	A context is a set of items present, and a count of words attributed to each item
@@ -58,7 +63,7 @@ def get_lexicon():
 		unkown_words = [w for w in range(num_words) if w not in Context.words_by_item[i]]
 		lexicon[i][unkown_words] = pyro.param('vocab_believed_{}'.format(i), torch.ones(len(unkown_words)) * 0.5, constraint=constraints.unit_interval)
 	return lexicon
-def rsa(s_0, listener_prior=None, depth=1, theta=5.):
+def rsa(s_0, listener_prior=None, depth=1, theta=5., costs = None):
 	"""
 	:param s_0: [s][u] (does not need to be normalized)
 	returns: s_1 [s][u]
@@ -71,11 +76,17 @@ def rsa(s_0, listener_prior=None, depth=1, theta=5.):
 	for d in range(depth):
 		# Update listener based on speaker: P_l(s | w, a) prop P_s(w | s, a)P(s)
 		l_1 = bayes_rule(listener_prior, s_0)  # [s][u]
+		l_1 = torch.log(l_1)
+		#Incorporate costs if applicable
+		if costs is not None:
+			l_1[:] -= costs
 		# Update speaker based on listener
 		s_2 = softmax(l_1, theta=theta)  # [s][u]  #Should actually softmax logprob
 	return s_2
 
 def single_word_model(target_item, items_present, utterances, traj_id, use_rsa=True, theta = 5.):
+	global time_building_s_0
+	global time_building_s_2
 	# print("known words and values:\n{}\n{}".format(known_words_by_item,known_values_by_item))
 	num_items = len(items_present)  #Note that this may be less than the number of known items if some are missing from this context
 	num_words = len(Context.all_words)
@@ -84,6 +95,7 @@ def single_word_model(target_item, items_present, utterances, traj_id, use_rsa=T
 	item_plate = pyro.plate('item_plate_{}'.format(traj_id), num_items)
 	utterance_plate = pyro.plate('utterance_plate_{}'.format(traj_id), len(utterances))
 	#TODO Memoize s_0 calculation
+	s_0_start = time.time()
 	s_0 = torch.empty((num_items,num_words))
 	for i_local_id in item_plate:
 		# print("s_0[{}]".format(i_local_id))
@@ -94,10 +106,13 @@ def single_word_model(target_item, items_present, utterances, traj_id, use_rsa=T
 		unkown_words = [w for w in range(num_words) if w not in Context.words_by_item[i_global_id]]
 		s_0[i_local_id][unkown_words] = pyro.param('vocab_believed_{}'.format(i_global_id), torch.ones(len(unkown_words)) * 0.5, constraint=constraints.unit_interval)
 		# print(s_0[i_local_id])
+	s_0_end_time = time.time()
+	time_building_s_0 += s_0_end_time - s_0_start
 	# target_item_local_id = items_present.index(target_item)
 	target_item_local_id = tensor_index(target_item,items_present)
 	s_0_local = s_0[items_present]
 	s_2 = rsa(s_0=s_0_local, theta=theta) if use_rsa else s_0_local
+	time_building_s_2 += time.time() - s_0_end_time
 	for u_id in utterance_plate:
 		pyro.sample('utterance_{}_{}'.format(traj_id, u_id), dist.Categorical(s_2[target_item_local_id]), obs=torch.tensor(utterances[u_id]))
 	return s_0
@@ -106,6 +121,47 @@ def single_word_model(target_item, items_present, utterances, traj_id, use_rsa=T
 def single_word_guide(target_item, items_present, utterances, traj_id, use_rsa=True, theta= 5.):
 	pass
 
+def bag_of_words_model(target_item, items_present, utterances, traj_id, use_rsa=True, theta = 5., max_words_per_utterance = 3, cost_per_word = 1):
+	#DEBUG PROFILING CODE
+	global time_building_s_0
+	global time_building_s_2
+	# print("known words and values:\n{}\n{}".format(known_words_by_item,known_values_by_item))
+	num_items = len(items_present)  #Note that this may be less than the number of known items if some are missing from this context
+	num_words = len(Context.all_words)
+	items_present = torch.tensor(list(items_present))
+	#Generate multi-word utterances and their costs (Should we generate these per-item? This would give us fewer, but may not make sense if we don't know lexicon
+	max_words_per_utterance = min(max_words_per_utterance,3)
+	#TODO check that this gives correct result
+	utterances_by_length =[combinations(range(num_words),i) for i in range(max_words_per_utterance + 1)]
+	#TODO actually use these utterances. First need to refactor rsa to use cost.
+	#Both item and utterance plates are sequential
+	item_plate = pyro.plate('item_plate_{}'.format(traj_id), num_items)
+	utterance_plate = pyro.plate('utterance_plate_{}'.format(traj_id), len(utterances))
+	#TODO Memoize s_0 calculation
+	#DEBUG PROFILING CODE
+	s_0_start = time.time()
+	s_0 = torch.empty((num_items,num_words))
+	for i_local_id in item_plate:
+		# print("s_0[{}]".format(i_local_id))
+		#Get the global id of the item, in case not all items are present
+		i_global_id = items_present[i_local_id]
+		s_0[i_local_id][Context.words_by_item[i_global_id]] = torch.tensor(Context.values_by_item[i_global_id], dtype=torch.float)
+		# print(s_0[i_local_id])
+		unkown_words = [w for w in range(num_words) if w not in Context.words_by_item[i_global_id]]
+		s_0[i_local_id][unkown_words] = pyro.param('vocab_believed_{}'.format(i_global_id), torch.ones(len(unkown_words)) * 0.5, constraint=constraints.unit_interval)
+		# print(s_0[i_local_id])
+	#DEBUG PROFILING CODE
+	s_0_end_time = time.time()
+	time_building_s_0 += s_0_end_time - s_0_start
+	# target_item_local_id = items_present.index(target_item)
+	target_item_local_id = tensor_index(target_item,items_present)
+	s_0_local = s_0[items_present]
+	s_2 = rsa(s_0=s_0_local, theta=theta) if use_rsa else s_0_local
+	#DEBUG PROFILING CODE
+	time_building_s_2 += time.time() - s_0_end_time
+	for u_id in utterance_plate:
+		pyro.sample('utterance_{}_{}'.format(traj_id, u_id), dist.Categorical(s_2[target_item_local_id]), obs=torch.tensor(utterances[u_id]))
+	return s_0
 
 def gesture_model(target_item, gestures, traj_id, arm_length = 0.5, noise = .1):
 	"""
@@ -165,7 +221,7 @@ def main_guide(trajectories,infer={"enumerate":"parallel"}, **kwargs,):
 		#Both of the following guide functions are empty, but we call them out of principle.
 		single_word_guide(target_item, items_present, utterances, traj_id)
 		gesture_guide(target_item,gestures, traj_id)
-		
+
 def generate_observations(s_0_true=None, num_utterances_per_item=1000, theta=5., context_list = None, skipped_items = ()):
 	if s_0_true is None:
 		s_0_true = normalize(torch.tensor(
@@ -268,6 +324,9 @@ def run_trials(domain_args, stop_method = 'time', svi_time = 1, convergence_thre
 	TODO: return observations, actions as well as beliefs.
 	:param domain_args: domain arguments (dictionary)
 	"""
+	global time_building_s_0
+	global time_building_s_2
+	trials_start_time = time.time()
 	da = SimpleNamespace(**domain_args)
 	num_items = da.item_locs.shape[0]
 	pyro.clear_param_store()
@@ -367,7 +426,9 @@ def run_trials(domain_args, stop_method = 'time', svi_time = 1, convergence_thre
 		words_heard_this_trial = list(set([u for u in utterances]))  #TODO change to work for set of words utterances
 		if verbose: print("words_heard_this_trial: {}".format(words_heard_this_trial))
 		revelations = [Revelation(target_item, words_heard_this_trial, [1 for _ in words_heard_this_trial])]	
-		update_with_revelations(svi=svi, revelations = revelations, svi_args={'trajectories':trajectories}, time_limit=svi_time)	
+		update_with_revelations(svi=svi, revelations = revelations, svi_args={'trajectories':trajectories}, time_limit=svi_time)
+	trials_total_time = time.time() - trials_start_time
+	print("Total trial time: {}\ns_0 time: {}\ns_2 time: {}".format(trials_total_time,time_building_s_0,time_building_s_2))
 	return beliefs_by_trial
 def act(target_item_belief):
 	#TODO make less stupid. Incorporate lexicon, item locations
